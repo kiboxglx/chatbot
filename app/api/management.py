@@ -1,13 +1,15 @@
 import requests
 import base64
+import os
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 router = APIRouter()
 
-# Configurações da Evolution API (Interna do Docker)
-EVOLUTION_URL = "http://evolution_api:8080"
-API_KEY = "429683C4C977415CAAFCCE10F7D57E11"
+# Configurações da Evolution API
+# Usa variável de ambiente se existir, senão usa o padrão do Docker local
+EVOLUTION_URL = os.getenv("WHATSAPP_API_URL", "http://evolution_api:8080")
+API_KEY = os.getenv("AUTHENTICATION_API_KEY", "429683C4C977415CAAFCCE10F7D57E11")
 INSTANCE = "chatbot"
 
 headers = {
