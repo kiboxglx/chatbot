@@ -1,0 +1,85 @@
+{
+    "name": "Integração Evolution -> Python",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "webhook",
+                "options": {}
+            },
+            "name": "Webhook Evolution",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [
+                460,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "keepOnlySet": true,
+                "values": {
+                    "string": [
+                        {
+                            "name": "remoteJid",
+                            "value": "={{ $json.body.data.key.remoteJid.replace('@s.whatsapp.net', '') }}"
+                        },
+                        {
+                            "name": "conversation",
+                            "value": "={{ $json.body.data.message.conversation || $json.body.data.message.extendedTextMessage.text || '' }}"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "name": "Formatar Dados",
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 1,
+            "position": [
+                680,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://chatbot_backend:8000/webhook",
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify($json) }}",
+                "options": {}
+            },
+            "name": "Enviar para Python",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 3,
+            "position": [
+                900,
+                300
+            ]
+        }
+    ],
+    "connections": {
+        "Webhook Evolution": {
+            "main": [
+                [
+                    {
+                        "node": "Formatar Dados",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Formatar Dados": {
+            "main": [
+                [
+                    {
+                        "node": "Enviar para Python",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

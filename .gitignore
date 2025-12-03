@@ -1,0 +1,15 @@
+node_modules/
+__pycache__/
+*.pyc
+.env
+.venv
+venv/
+storage/
+contabilidade.db
+.DS_Store
+dist/
+build/
+coverage/
+.idea/
+.vscode/
+*.log

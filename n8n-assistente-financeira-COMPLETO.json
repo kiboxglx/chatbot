@@ -1,0 +1,362 @@
+{
+    "name": "Assistente Financeira IA - Completo",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "financas",
+                "responseMode": "onReceived",
+                "options": {}
+            },
+            "id": "webhook-trigger",
+            "name": "Webhook WhatsApp",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1.1,
+            "position": [
+                240,
+                400
+            ],
+            "webhookId": "financas-whatsapp"
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": false,
+                        "leftValue": "",
+                        "typeValidation": "strict"
+                    },
+                    "conditions": [
+                        {
+                            "id": "image-check",
+                            "leftValue": "={{ $json.body.message.imageMessage }}",
+                            "rightValue": "",
+                            "operator": {
+                                "type": "object",
+                                "operation": "exists"
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                },
+                "options": {}
+            },
+            "id": "check-message-type",
+            "name": "Tem Imagem?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2,
+            "position": [
+                460,
+                400
+            ]
+        },
+        {
+            "parameters": {
+                "url": "={{ $json.body.message.imageMessage.url }}",
+                "options": {}
+            },
+            "id": "download-image",
+            "name": "Baixar Imagem",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.1,
+            "position": [
+                680,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "model": "gpt-4o",
+                "options": {
+                    "temperature": 0.3
+                },
+                "messages": {
+                    "values": [
+                        {
+                            "content": "=Você é um assistente financeiro especializado em extrair dados de notas fiscais e cupons.\n\nAnalise esta imagem e extraia:\n- Estabelecimento\n- Valor total\n- Data (formato DD/MM/YYYY)\n- Categoria (Alimentação, Transporte, Saúde, Lazer, Outros)\n\nRetorne APENAS um JSON válido:\n{\n  \"estabelecimento\": \"nome\",\n  \"valor\": 0.00,\n  \"data\": \"DD/MM/YYYY\",\n  \"categoria\": \"categoria\"\n}"
+                        }
+                    ]
+                },
+                "imageUrls": "={{ $json.data }}"
+            },
+            "id": "extract-from-image",
+            "name": "Extrair Dados (OpenAI Vision)",
+            "type": "@n8n/n8n-nodes-langchain.openAi",
+            "typeVersion": 1.3,
+            "position": [
+                900,
+                200
+            ],
+            "credentials": {
+                "openAiApi": {
+                    "id": "openai-credentials",
+                    "name": "OpenAI API"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "jsCode": "const response = $input.item.json.response;\nconst parsed = JSON.parse(response);\n\nreturn {\n  json: {\n    estabelecimento: parsed.estabelecimento,\n    valor: parsed.valor,\n    data: parsed.data,\n    categoria: parsed.categoria,\n    remoteJid: $('Webhook WhatsApp').item.json.body.key.remoteJid.replace('@s.whatsapp.net', '')\n  }\n};"
+            },
+            "id": "parse-json",
+            "name": "Parse JSON",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1120,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "append",
+                "documentId": {
+                    "__rl": true,
+                    "value": "SUA_PLANILHA_ID",
+                    "mode": "id"
+                },
+                "sheetName": {
+                    "__rl": true,
+                    "value": "Gastos",
+                    "mode": "name"
+                },
+                "columns": {
+                    "mappingMode": "defineBelow",
+                    "value": {
+                        "Data": "={{ $json.data }}",
+                        "Estabelecimento": "={{ $json.estabelecimento }}",
+                        "Valor": "={{ $json.valor }}",
+                        "Categoria": "={{ $json.categoria }}"
+                    }
+                },
+                "options": {}
+            },
+            "id": "save-to-sheets",
+            "name": "Salvar no Sheets",
+            "type": "n8n-nodes-base.googleSheets",
+            "typeVersion": 4.2,
+            "position": [
+                1340,
+                200
+            ],
+            "credentials": {
+                "googleSheetsOAuth2Api": {
+                    "id": "google-sheets-credentials",
+                    "name": "Google Sheets"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "agent": "conversationalAgent",
+                "promptType": "define",
+                "text": "={{ $json.body.message.conversation || $json.body.message.extendedTextMessage?.text }}",
+                "hasOutputParser": true,
+                "options": {
+                    "systemMessage": "=Você é um assistente financeiro pessoal.\n\nVocê tem acesso a uma planilha do Google Sheets com os gastos do usuário.\n\nQuando o usuário perguntar sobre gastos, consulte a planilha e responda de forma clara e objetiva.\n\nUse formatação Markdown do WhatsApp:\n- *Negrito* para valores\n- _Itálico_ para datas\n- Lista com • para itens\n\nSempre seja educado e prestativo."
+                }
+            },
+            "id": "ai-agent",
+            "name": "AI Agent",
+            "type": "@n8n/n8n-nodes-langchain.agent",
+            "typeVersion": 1.6,
+            "position": [
+                680,
+                600
+            ],
+            "credentials": {
+                "openAiApi": {
+                    "id": "openai-credentials",
+                    "name": "OpenAI API"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "operation": "read",
+                "documentId": {
+                    "__rl": true,
+                    "value": "SUA_PLANILHA_ID",
+                    "mode": "id"
+                },
+                "sheetName": {
+                    "__rl": true,
+                    "value": "Gastos",
+                    "mode": "name"
+                },
+                "options": {}
+            },
+            "id": "read-sheets",
+            "name": "Ler Planilha",
+            "type": "n8n-nodes-base.googleSheets",
+            "typeVersion": 4.2,
+            "position": [
+                900,
+                600
+            ],
+            "credentials": {
+                "googleSheetsOAuth2Api": {
+                    "id": "google-sheets-credentials",
+                    "name": "Google Sheets"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://evolution_api:8080/message/sendText/chatbot",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "apikey",
+                            "value": "429683C4C977415CAAFCCE10F7D57E11"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={\n  \"number\": \"{{ $('Webhook WhatsApp').item.json.body.key.remoteJid.replace('@s.whatsapp.net', '') }}\",\n  \"text\": \"{{ $json.output || $json.response }}\"\n}",
+                "options": {}
+            },
+            "id": "send-response",
+            "name": "Enviar Resposta",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.1,
+            "position": [
+                1560,
+                400
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const estabelecimento = $json.estabelecimento;\nconst valor = $json.valor;\nconst data = $json.data;\nconst categoria = $json.categoria;\n\nconst message = `✅ *Gasto salvo com sucesso!*\\n\\n📊 *Detalhes:*\\n• Estabelecimento: _${estabelecimento}_\\n• Valor: *R$ ${valor.toFixed(2)}*\\n• Data: ${data}\\n• Categoria: ${categoria}\\n\\n_Registrado em ${new Date().toLocaleString('pt-BR')}_`;\n\nreturn {\n  json: {\n    response: message,\n    remoteJid: $json.remoteJid\n  }\n};"
+            },
+            "id": "format-success",
+            "name": "Formatar Sucesso",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1340,
+                400
+            ]
+        }
+    ],
+    "connections": {
+        "Webhook WhatsApp": {
+            "main": [
+                [
+                    {
+                        "node": "Tem Imagem?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Tem Imagem?": {
+            "main": [
+                [
+                    {
+                        "node": "Baixar Imagem",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "AI Agent",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Baixar Imagem": {
+            "main": [
+                [
+                    {
+                        "node": "Extrair Dados (OpenAI Vision)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Extrair Dados (OpenAI Vision)": {
+            "main": [
+                [
+                    {
+                        "node": "Parse JSON",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Parse JSON": {
+            "main": [
+                [
+                    {
+                        "node": "Salvar no Sheets",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Salvar no Sheets": {
+            "main": [
+                [
+                    {
+                        "node": "Formatar Sucesso",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "AI Agent": {
+            "main": [
+                [
+                    {
+                        "node": "Ler Planilha",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Ler Planilha": {
+            "main": [
+                [
+                    {
+                        "node": "Enviar Resposta",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Formatar Sucesso": {
+            "main": [
+                [
+                    {
+                        "node": "Enviar Resposta",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "pinData": {},
+    "settings": {
+        "executionOrder": "v1"
+    },
+    "staticData": null,
+    "tags": [],
+    "triggerCount": 1,
+    "updatedAt": "2025-12-01T22:11:00.000Z",
+    "versionId": "1"
+}

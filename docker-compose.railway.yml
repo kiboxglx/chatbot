@@ -1,0 +1,41 @@
+version: '3.3'
+
+services:
+  # --- API DO WHATSAPP (Evolution API) ---
+  evolution-api:
+    image: atendai/evolution-api:v1.7.4
+    restart: always
+    environment:
+      - SERVER_URL=https://${RAILWAY_PUBLIC_DOMAIN}
+      - DOCKER_ENV=true
+      - AUTHENTICATION_API_KEY=${AUTHENTICATION_API_KEY}
+      - DATABASE_PROVIDER=postgresql
+      - DATABASE_CONNECTION_URI=postgresql://${PGUSER}:${PGPASSWORD}@${PGHOST}:${PGPORT}/${PGDATABASE}
+      - REDIS_ENABLED=true
+      - REDIS_URI=redis://${REDISUSER}:${REDISPASSWORD}@${REDISHOST}:${REDISPORT}
+      - REDIS_PREFIX=evolution
+      # Configurações de QR Code e Webhook
+      - QRCODE_LIMIT=30
+      - WEBHOOK_GLOBAL_URL=http://chatbot_backend:8000/webhook
+      - WEBHOOK_GLOBAL_ENABLED=true
+      - WEBHOOK_EVENTS_APPLICATION_STARTUP=false
+      - WEBHOOK_EVENTS_QRCODE_UPDATED=true
+      - WEBHOOK_EVENTS_MESSAGES_SET=true
+      - WEBHOOK_EVENTS_MESSAGES_UPSERT=true
+    ports:
+      - "${PORT:-8080}:8080"
+    depends_on:
+      - chatbot_backend
+
+  # --- SEU CÉREBRO (Python Backend) ---
+  chatbot_backend:
+    build: .
+    restart: always
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - AUTHENTICATION_API_KEY=${AUTHENTICATION_API_KEY}
+      - WHATSAPP_API_URL=http://evolution-api:8080
+      - DATABASE_URL=postgresql://${PGUSER}:${PGPASSWORD}@${PGHOST}:${PGPORT}/${PGDATABASE}
+    ports:
+      - "8000:8000"
+    command: uvicorn main:app --host 0.0.0.0 --port 8000

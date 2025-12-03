@@ -1,0 +1,103 @@
+{
+    "name": "Chatbot Contábil WhatsApp - Local",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "whatsapp",
+                "responseMode": "onReceived",
+                "options": {}
+            },
+            "id": "webhook-node",
+            "name": "Webhook WhatsApp",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [
+                250,
+                300
+            ],
+            "webhookId": "chatbot-whatsapp"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://host.docker.internal:8000/webhook",
+                "authentication": "none",
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={\n  \"remoteJid\": \"{{ $json.body.key.remoteJid.replace('@s.whatsapp.net', '') }}\",\n  \"conversation\": \"{{ $json.body.message.conversation || $json.body.message.extendedTextMessage?.text || 'sem texto' }}\"\n}",
+                "options": {}
+            },
+            "id": "backend-request",
+            "name": "Chamar Backend Python",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.1,
+            "position": [
+                470,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://evolution_api:8080/message/sendText/chatbot",
+                "authentication": "none",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "apikey",
+                            "value": "429683C4C977415CAAFCCE10F7D57E11"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={\n  \"number\": \"{{ $json.client?.telefone || '5531982119605' }}\",\n  \"text\": \"✅ Mensagem processada!\\n\\nCliente: {{ $json.client?.nome || 'Não identificado' }}\\nIntenção: {{ $json.intent }}\"\n}",
+                "options": {}
+            },
+            "id": "send-whatsapp",
+            "name": "Enviar Resposta WhatsApp",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.1,
+            "position": [
+                690,
+                300
+            ]
+        }
+    ],
+    "connections": {
+        "Webhook WhatsApp": {
+            "main": [
+                [
+                    {
+                        "node": "Chamar Backend Python",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Chamar Backend Python": {
+            "main": [
+                [
+                    {
+                        "node": "Enviar Resposta WhatsApp",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "active": true,
+    "settings": {
+        "executionOrder": "v1"
+    },
+    "versionId": "1",
+    "id": "chatbot-local",
+    "meta": {
+        "instanceId": "local"
+    },
+    "tags": []
+}
