@@ -13,6 +13,7 @@ export default function WhatsAppConnection() {
 
     // Verifica status ao carregar
     useEffect(() => {
+        console.log("WhatsAppConnection V2 Loaded. API URL:", API_URL);
         checkStatus();
         const interval = setInterval(() => {
             if (status !== 'open') checkStatus();
@@ -74,7 +75,7 @@ export default function WhatsAppConnection() {
             <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
                 <div className="flex items-center gap-3">
                     <Smartphone className="w-6 h-6 text-emerald-400" />
-                    <h2 className="font-bold text-lg">Conexão WhatsApp</h2>
+                    <h2 className="font-bold text-lg">Conexão WhatsApp (V2)</h2>
                 </div>
                 <div className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 ${status === 'open' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/50' : 'bg-red-500/20 text-red-400 border border-red-500/50'
                     }`}>
