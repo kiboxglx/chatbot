@@ -45,17 +45,17 @@ class Settings(BaseModel):
 def load_settings():
     if not os.path.exists(SETTINGS_FILE):
         os.makedirs(os.path.dirname(SETTINGS_FILE), exist_ok=True)
-        with open(SETTINGS_FILE, "w") as f:
-            json.dump(DEFAULT_SETTINGS, f)
+        with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
+            json.dump(DEFAULT_SETTINGS, f, ensure_ascii=False, indent=4)
         return DEFAULT_SETTINGS
     
-    with open(SETTINGS_FILE, "r") as f:
+    with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
         return json.load(f)
 
 def save_settings(settings: dict):
     os.makedirs(os.path.dirname(SETTINGS_FILE), exist_ok=True)
-    with open(SETTINGS_FILE, "w") as f:
-        json.dump(settings, f)
+    with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
+        json.dump(settings, f, ensure_ascii=False, indent=4)
 
 @router.get("/settings", response_model=Settings)
 def get_settings():
