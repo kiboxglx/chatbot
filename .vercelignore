@@ -1,9 +1,26 @@
+# Ignorar tudo do backend Python
 *.py
-requirements.txt
-Dockerfile
-docker-compose.yml
-.env
-venv/
+app/
 __pycache__/
-storage/
-*.db
+venv/
+.env
+requirements.txt
+Procfile
+runtime.txt
+railway.toml
+docker-compose.yml
+docker-compose.railway.yml
+Dockerfile
+nixpacks.toml
+
+# Ignorar scripts de configuração
+configurar_*.py
+diagnostico_*.py
+testar_*.py
+verificar_*.py
+debug_*.py
+
+# Manter apenas o frontend e configurações essenciais
+!frontend/
+!vercel.json
+!package.json
