@@ -20,7 +20,7 @@ def get_token():
         print(f"Tentando gerar token em: {url}")
         resp = requests.post(url, json={"secret": SECRET_KEY}, timeout=10)
         
-        if resp.status_code == 200:
+        if resp.status_code in [200, 201]:
             data = resp.json()
             if 'token' in data: return data['token']
             if 'session' in data: return data['session']['token']
