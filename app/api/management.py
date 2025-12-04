@@ -4,6 +4,9 @@ import os
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
+class PairingRequest(BaseModel):
+    number: str
+
 router = APIRouter()
 
 # Configurações da Evolution API
@@ -70,6 +73,46 @@ def get_qrcode():
         
     except Exception as e:
         print(f"Erro QR Code: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/management/pairing-code")
+def get_pairing_code(request: PairingRequest):
+    """Gera código de pareamento para conexão sem QR Code"""
+    try:
+        # 1. Garante que a instância existe
+        create_url = f"{EVOLUTION_URL}/instance/create"
+        create_payload = {
+            "instanceName": INSTANCE,
+            "qrcode": True, # Precisa estar true para criar, mas vamos usar pairing
+            "integration": "WHATSAPP-BAILEYS"
+        }
+        requests.post(create_url, json=create_payload, headers=headers)
+        
+        # 2. Solicita o código de pareamento
+        # Formata o número (remove caracteres não numéricos)
+        phone = "".join(filter(str.isdigit, request.number))
+        
+        connect_url = f"{EVOLUTION_URL}/instance/connect/{INSTANCE}"
+        # Para Evolution API v1.6+, geralmente se passa o número no body para gerar código
+        # Mas a implementação exata varia. Vamos tentar o padrão mais comum.
+        
+        # Tenta conectar passando o número
+        payload = {"number": phone} 
+        resp = requests.get(connect_url, headers=headers, params=payload, timeout=15)
+        
+        # Se não funcionar via GET, tenta via endpoint específico se existir (algumas versões usam /instance/pairingCode)
+        if resp.status_code != 200 or not resp.json().get('pairingCode'):
+             # Tenta endpoint alternativo comum em forks da Evolution
+             pairing_url = f"{EVOLUTION_URL}/instance/pairingCode/{INSTANCE}"
+             resp = requests.post(pairing_url, headers=headers, json={"number": phone}, timeout=15)
+
+        if resp.status_code == 200:
+            return resp.json()
+            
+        raise HTTPException(status_code=400, detail=f"Erro ao gerar código: {resp.text}")
+        
+    except Exception as e:
+        print(f"Erro Pairing Code: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/management/logout")
