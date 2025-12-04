@@ -13,13 +13,13 @@ import {
     CheckCircle2,
     AlertCircle,
     X,
-    Menu,
     LogOut
 } from 'lucide-react';
+import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar";
+import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
 
 // Configuração da API
-// Em produção (Railway), a API é servida na mesma origem, então deixamos vazio.
-// Em desenvolvimento local, usa localhost:8000.
 const API_URL = import.meta.env.VITE_API_URL || '';
 
 interface Client {
@@ -54,6 +54,33 @@ const Toast = ({ message, type, onClose }: { message: string, type: 'success' | 
     </div>
 );
 
+const Logo = () => {
+    return (
+        <div className="font-normal flex space-x-2 items-center text-sm text-black py-1 relative z-20">
+            <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-500/20 flex-shrink-0">
+                <MessageSquare className="text-white" size={18} />
+            </div>
+            <motion.span
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="font-bold text-lg text-white whitespace-pre"
+            >
+                Ana Chatbot
+            </motion.span>
+        </div>
+    );
+};
+
+const LogoIcon = () => {
+    return (
+        <div className="font-normal flex space-x-2 items-center text-sm text-black py-1 relative z-20">
+            <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-500/20 flex-shrink-0">
+                <MessageSquare className="text-white" size={18} />
+            </div>
+        </div>
+    );
+};
+
 function App() {
     const [activeTab, setActiveTab] = useState<'dashboard' | 'clients' | 'settings' | 'connection'>('dashboard');
     const [clients, setClients] = useState<Client[]>([]);
@@ -65,6 +92,7 @@ function App() {
     const [formData, setFormData] = useState({ nome: '', telefone: '', empresa_nome: '', cnpj_cpf: '' });
     const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [open, setOpen] = useState(false);
 
     useEffect(() => {
         fetchClients();
@@ -202,70 +230,68 @@ function App() {
         client.cnpj_cpf.includes(searchTerm)
     );
 
-    const NavButton = ({ tab, icon: Icon, label }: { tab: typeof activeTab, icon: any, label: string }) => (
-        <button
-            onClick={() => setActiveTab(tab)}
-            className={`flex flex-col md:flex-row items-center justify-center md:justify-start gap-1 md:gap-3 px-2 md:px-4 py-2 md:py-3 rounded-xl transition-all duration-200 font-medium w-full md:w-auto
-                ${activeTab === tab
-                    ? 'text-emerald-400 md:bg-emerald-600 md:text-white md:shadow-lg md:shadow-emerald-900/20'
-                    : 'text-gray-400 hover:text-white md:hover:bg-gray-700/50'
-                } active:scale-95 md:active:scale-100`}
-        >
-            <Icon size={24} className={activeTab === tab ? "animate-pulse md:animate-none" : ""} />
-            <span className="text-[10px] md:text-sm">{label}</span>
-        </button>
-    );
+    const links = [
+        {
+            label: "Visão Geral",
+            href: "#",
+            icon: <LayoutDashboard className="text-neutral-200 h-5 w-5 flex-shrink-0" />,
+            onClick: () => setActiveTab('dashboard')
+        },
+        {
+            label: "Conexão WhatsApp",
+            href: "#",
+            icon: <Activity className="text-neutral-200 h-5 w-5 flex-shrink-0" />,
+            onClick: () => setActiveTab('connection')
+        },
+        {
+            label: "Meus Clientes",
+            href: "#",
+            icon: <Users className="text-neutral-200 h-5 w-5 flex-shrink-0" />,
+            onClick: () => setActiveTab('clients')
+        },
+        {
+            label: "Inteligência da Ana",
+            href: "#",
+            icon: <SettingsIcon className="text-neutral-200 h-5 w-5 flex-shrink-0" />,
+            onClick: () => setActiveTab('settings')
+        }
+    ];
 
     return (
-        <div className="min-h-screen bg-gray-900 text-gray-100 flex flex-col md:flex-row font-sans selection:bg-emerald-500/30">
-
+        <div className={cn(
+            "rounded-md flex flex-col md:flex-row bg-gray-900 w-full flex-1 max-w-full mx-auto border border-neutral-700 overflow-hidden h-screen"
+        )}>
             {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
-            {/* Mobile Header */}
-            <div className="md:hidden bg-gray-800/80 backdrop-blur-md border-b border-gray-700 p-4 flex items-center justify-between sticky top-0 z-40">
-                <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-500/20">
-                        <MessageSquare className="text-white" size={18} />
-                    </div>
-                    <h1 className="text-lg font-bold text-white">Ana Chatbot</h1>
-                </div>
-                <div className={`w-2 h-2 rounded-full ${settings.active ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`}></div>
-            </div>
-
-            {/* Sidebar (Desktop) / Bottom Nav (Mobile) */}
-            <aside className="
-                fixed bottom-0 left-0 w-full h-16 bg-gray-800/90 backdrop-blur-lg border-t border-gray-700 z-50 flex flex-row justify-around items-center px-2
-                md:relative md:w-72 md:h-screen md:flex-col md:justify-start md:items-stretch md:bg-gray-800 md:border-r md:p-6 md:shadow-xl
-            ">
-                {/* Desktop Logo */}
-                <div className="hidden md:flex items-center gap-3 mb-10 px-2">
-                    <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
-                        <MessageSquare className="text-white" size={24} />
+            <Sidebar open={open} setOpen={setOpen}>
+                <SidebarBody className="justify-between gap-10 bg-gray-800 border-r border-gray-700">
+                    <div className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
+                        {open ? <Logo /> : <LogoIcon />}
+                        <div className="mt-8 flex flex-col gap-2">
+                            {links.map((link, idx) => (
+                                <SidebarLink key={idx} link={link} className={activeTab === ['dashboard', 'connection', 'clients', 'settings'][idx] ? "bg-gray-700/50 rounded-lg" : ""} />
+                            ))}
+                        </div>
                     </div>
                     <div>
-                        <h1 className="text-xl font-bold text-white">Ana Chatbot</h1>
-                        <p className="text-xs text-emerald-400 font-medium">Secretária Virtual</p>
+                        <div className="flex items-center gap-2 p-2">
+                            <div className={`w-3 h-3 rounded-full ${settings.active ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`}></div>
+                            {open && (
+                                <motion.span
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    className="text-sm text-gray-400 whitespace-pre"
+                                >
+                                    Sistema {settings.active ? 'Online' : 'Offline'}
+                                </motion.span>
+                            )}
+                        </div>
                     </div>
-                </div>
-
-                <nav className="flex flex-row md:flex-col w-full md:space-y-2 justify-around md:justify-start">
-                    <NavButton tab="dashboard" icon={LayoutDashboard} label="Visão Geral" />
-                    <NavButton tab="connection" icon={Activity} label="Conexão" />
-                    <NavButton tab="clients" icon={Users} label="Clientes" />
-                    <NavButton tab="settings" icon={SettingsIcon} label="IA" />
-                </nav>
-
-                {/* Desktop Status Footer */}
-                <div className="hidden md:block mt-auto pt-6 border-t border-gray-700">
-                    <div className="flex items-center gap-3 px-2">
-                        <div className={`w-3 h-3 rounded-full ${settings.active ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`}></div>
-                        <span className="text-sm text-gray-400">Sistema {settings.active ? 'Online' : 'Offline'}</span>
-                    </div>
-                </div>
-            </aside>
+                </SidebarBody>
+            </Sidebar>
 
             {/* Main Content */}
-            <main className="flex-1 p-4 md:p-8 overflow-y-auto bg-gray-900 pb-24 md:pb-8">
+            <main className="flex-1 p-4 md:p-8 overflow-y-auto bg-gray-900">
 
                 {activeTab === 'dashboard' && (
                     <div className="max-w-5xl mx-auto animate-fade-in space-y-6">

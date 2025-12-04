@@ -24,6 +24,11 @@ app.include_router(settings.router)
 app.include_router(error_handler.router)
 app.include_router(management.router)
 
+@app.get("/")
+def read_root():
+    return {"status": "Chatbot API Online", "docs": "/docs"}
+
+
 # --- Frontend Integration (Production) ---
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
