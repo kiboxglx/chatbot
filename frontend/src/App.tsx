@@ -78,7 +78,7 @@ const LogoIcon = () => {
 };
 
 function App() {
-    const [activeTab, setActiveTab] = useState<'dashboard' | 'clients' | 'settings' | 'connection'>('dashboard');
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'clients' | 'settings' | 'connection' | 'whatsapp'>('dashboard');
     const [clients, setClients] = useState<Client[]>([]);
     const [settings, setSettings] = useState<SettingsData>({ system_prompt: '', active: true });
 
@@ -199,6 +199,12 @@ function App() {
             onClick: () => setActiveTab('clients')
         },
         {
+            label: "Conversas WhatsApp",
+            href: "#",
+            icon: <MessageSquare className="text-neutral-200 h-5 w-5 flex-shrink-0" />,
+            onClick: () => setActiveTab('whatsapp')
+        },
+        {
             label: "Inteligência da Ana",
             href: "#",
             icon: <SettingsIcon className="text-neutral-200 h-5 w-5 flex-shrink-0" />,
@@ -218,7 +224,7 @@ function App() {
                         {open ? <Logo /> : <LogoIcon />}
                         <div className="mt-8 flex flex-col gap-2">
                             {links.map((link, idx) => (
-                                <SidebarLink key={idx} link={link} className={activeTab === ['dashboard', 'connection', 'clients', 'settings'][idx] ? "bg-gray-700/50 rounded-lg" : ""} />
+                                <SidebarLink key={idx} link={link} className={activeTab === ['dashboard', 'connection', 'clients', 'whatsapp', 'settings'][idx] ? "bg-gray-700/50 rounded-lg" : ""} />
                             ))}
                         </div>
                     </div>
@@ -407,6 +413,31 @@ function App() {
                                     </tbody>
                                 </table>
                             </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'whatsapp' && (
+                    <div className="h-full animate-fade-in">
+                        <header className="mb-6">
+                            <h2 className="text-2xl md:text-3xl font-bold text-white">Conversas WhatsApp</h2>
+                            <p className="text-gray-400 text-sm md:text-base">Visualize e gerencie as conversas em tempo real</p>
+                        </header>
+
+                        <div className="bg-gray-800 rounded-2xl border border-gray-700 overflow-hidden" style={{ height: 'calc(100vh - 200px)' }}>
+                            <iframe
+                                src="https://web.whatsapp.com"
+                                className="w-full h-full"
+                                title="WhatsApp Web"
+                                allow="microphone; camera"
+                            />
+                        </div>
+
+                        <div className="mt-4 p-4 bg-blue-500/10 border border-blue-500/30 rounded-xl">
+                            <p className="text-blue-400 text-sm">
+                                💡 <strong>Dica:</strong> Escaneie o QR Code do WhatsApp Web aqui para visualizar as conversas.
+                                O bot continuará respondendo automaticamente mesmo com o WhatsApp Web aberto!
+                            </p>
                         </div>
                     </div>
                 )}
