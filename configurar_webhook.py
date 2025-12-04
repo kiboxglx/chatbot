@@ -1,37 +1,52 @@
 import requests
-import json
+import os
 
 # Configurações
-API_URL = "http://localhost:8080"
-API_KEY = "429683C4C977415CAAFCCE10F7D57E11"
+EVOLUTION_URL = os.getenv("WHATSAPP_API_URL", "http://localhost:8080")
+API_KEY = os.getenv("AUTHENTICATION_API_KEY", "429683C4C977415CAAFCCE10F7D57E11")
 INSTANCE = "chatbot"
-# URL interna do Docker para o backend Python
-NEW_WEBHOOK_URL = "http://host.docker.internal:8000/webhook"
+WEBHOOK_URL = "https://chatbot-production-e324.up.railway.app/webhook"
 
-headers = {
-    "apikey": API_KEY,
-    "Content-Type": "application/json"
-}
+headers = {"apikey": API_KEY}
 
+print("=== CONFIGURAÇÃO DO WEBHOOK ===\n")
+
+# 1. Verificar configuração atual
+print("1. Verificando webhook atual...")
+try:
+    resp = requests.get(f"{EVOLUTION_URL}/webhook/find/{INSTANCE}", headers=headers, timeout=5)
+    if resp.status_code == 200:
+        config = resp.json()
+        print(f"   Configuração atual: {config}")
+    else:
+        print(f"   Nenhuma configuração encontrada (Status: {resp.status_code})")
+except Exception as e:
+    print(f"   ❌ Erro: {e}")
+
+# 2. Configurar webhook
+print(f"\n2. Configurando webhook para: {WEBHOOK_URL}")
 payload = {
-    "url": NEW_WEBHOOK_URL,
-    "enabled": True,
-    "webhookByEvents": False,
-    "events": ["MESSAGES_UPSERT"]
+    "url": WEBHOOK_URL,
+    "webhook_by_events": False,
+    "webhook_base64": False,
+    "events": [
+        "MESSAGES_UPSERT",
+        "MESSAGES_UPDATE",
+        "SEND_MESSAGE"
+    ]
 }
-
-print(f"Configurando Webhook para: {NEW_WEBHOOK_URL}...")
 
 try:
-    response = requests.post(f"{API_URL}/webhook/set/{INSTANCE}", json=payload, headers=headers)
+    resp = requests.post(f"{EVOLUTION_URL}/webhook/set/{INSTANCE}", json=payload, headers=headers, timeout=10)
+    print(f"   Status: {resp.status_code}")
+    print(f"   Resposta: {resp.text}")
     
-    if response.status_code == 200:
-        print("✅ SUCESSO! Webhook atualizado.")
-        print(f"Resposta: {response.json()}")
+    if resp.status_code in [200, 201]:
+        print("\n   ✅ Webhook configurado com sucesso!")
     else:
-        print(f"❌ ERRO: {response.status_code}")
-        print(response.text)
-
+        print(f"\n   ⚠️  Possível erro na configuração")
 except Exception as e:
-    print(f"❌ Erro de conexão: {e}")
-    print("Verifique se o container 'evolution_api' está rodando.")
+    print(f"   ❌ Erro: {e}")
+
+print("\n=== FIM DA CONFIGURAÇÃO ===")
+print("\n💡 Agora envie uma mensagem para o WhatsApp conectado e veja se o bot responde!")
