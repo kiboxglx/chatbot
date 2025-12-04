@@ -1,68 +1,75 @@
 import os
 import requests
-from typing import Optional
+import json
 
+class WhatsAppService:
+    def __init__(self):
+        self.base_url = os.getenv("WHATSAPP_API_URL", "http://localhost:8080")
+        self.api_key = os.getenv("AUTHENTICATION_API_KEY", "123Cartoon*") # Usado como SECRET_KEY no WPPConnect
+        self.session = "chatbot"
+        self.token = None
+
+    def _get_token(self):
+        """Gera o token de autenticação do WPPConnect"""
+        if self.token:
+            return self.token
+            
+        try:
+            url = f"{self.base_url}/api/{self.session}/{self.api_key}/generate-token"
+            payload = {"secret": self.api_key}
+            
+            # WPPConnect às vezes precisa iniciar a sessão antes de gerar token
+            # Mas vamos tentar gerar direto. Se falhar, o management.py cuida do start.
+            response = requests.post(url, json=payload, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'token' in data:
+                    self.token = data['token']
+                    return self.token
+                if 'session' in data and 'token' in data['session']: # Estrutura varia
+                    self.token = data['session']['token']
+                    return self.token
+            
+            print(f"Erro ao gerar token WPPConnect: {response.text}")
+            return None
+        except Exception as e:
+            print(f"Erro de conexão WPPConnect (Token): {e}")
+            return None
+
+    def _get_headers(self):
+        token = self._get_token()
+        if not token:
+            return {}
+        return {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json"
+        }
+
+    def enviar_texto(self, numero: str, mensagem: str):
+        try:
+            # Formata número (WPPConnect gosta de 5511999999999@c.us)
+            if "@" not in numero:
+                numero = f"{numero}@c.us"
+
+            url = f"{self.base_url}/api/{self.session}/send-message"
+            payload = {
+                "phone": numero,
+                "message": mensagem,
+                "isGroup": False
             }
-        }
-        
-        headers = {
-            "Content-Type": "application/json",
-            "apikey": self.api_token
-        }
+            
+            headers = self._get_headers()
+            if not headers:
+                print("Falha: Sem token de autenticação")
+                return {"error": "No auth token"}
 
-        try:
-            # Timeout curto para não travar a thread se a API estiver fora
-            response = requests.post(endpoint, json=payload, headers=headers, timeout=5)
-            print(f"Evolution API Response [{response.status_code}]: {response.text}")
-            response.raise_for_status()
+            response = requests.post(url, json=payload, headers=headers, timeout=20)
             return response.json()
-        except requests.exceptions.RequestException as e:
-            # Fallback / Mock conforme solicitado
-            print(f"[MOCK SEND] Enviando para {numero}: {mensagem}")
-            return {"status": "mock_sent", "error": str(e)}
+        except Exception as e:
+            print(f"Erro ao enviar mensagem (WPPConnect): {e}")
+            return {"error": str(e)}
 
-    def enviar_arquivo(self, numero: str, caminho_arquivo: str) -> dict:
-        """
-        Envia um arquivo (PDF, Imagem, etc) para o número especificado.
-        
-        Args:
-            numero (str): Número do destinatário.
-            caminho_arquivo (str): Caminho absoluto ou relativo do arquivo local.
-            
-        Returns:
-            dict: Resposta da API ou dicionário de mock em caso de erro.
-        """
-        instance_name = "chatbot"
-        endpoint = f"{self.api_url}/message/sendMedia/{instance_name}"
-        
-        # Verifica se o arquivo existe antes de tentar enviar
-        if not os.path.exists(caminho_arquivo):
-            print(f"[ERRO] Arquivo não encontrado: {caminho_arquivo}")
-            return {"status": "error", "message": "File not found"}
-
-        try:
-            # Para enviar media na Evolution API v1, geralmente usamos JSON com base64 ou URL,
-            # mas se for multipart/form-data (upload), o endpoint pode ser diferente.
-            # Vamos assumir envio via arquivo (multipart) se suportado, ou adaptar.
-            # A Evolution API v1.7.4 suporta multipart em /message/sendMedia/{instance}
-            
-            with open(caminho_arquivo, "rb") as f:
-                # O campo 'number' deve ir no form-data também
-                files = {
-                    "file": (os.path.basename(caminho_arquivo), f, "application/pdf") 
-                }
-                data = {
-                    "number": numero,
-                    "mediatype": "document", # ou image, video, etc. Vamos assumir document para PDF
-                    "mimetype": "application/pdf",
-                    "caption": "Segue seu documento."
-                }
-                headers = {"apikey": self.api_token}
-                
-                response = requests.post(endpoint, files=files, data=data, headers=headers, timeout=15)
-                response.raise_for_status()
-                return response.json()
-        except requests.exceptions.RequestException as e:
-            # Fallback / Mock conforme solicitado
-            print(f"[MOCK SEND] Enviando arquivo para {numero}: {caminho_arquivo}")
-            return {"status": "mock_sent", "error": str(e)}
+    def enviar_arquivo(self, numero: str, caminho_arquivo: str, legenda: str = ""):
+        # Implementação futura para arquivos
+        pass
