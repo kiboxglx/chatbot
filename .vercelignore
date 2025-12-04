@@ -1,16 +1,9 @@
-# Ignore Python backend files
 *.py
-app/
-Dockerfile
-docker-compose*.yml
 requirements.txt
-runtime.txt
-Procfile
-railway.toml
-
-# Ignore environment files
+Dockerfile
+docker-compose.yml
 .env
-.env.*
-
-# Keep only frontend
-!frontend/
+venv/
+__pycache__/
+storage/
+*.db
