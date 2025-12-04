@@ -17,6 +17,19 @@ def get_token():
     """Gera token para operações administrativas"""
     url = f"{BASE_URL}/api/{SESSION}/{SECRET_KEY}/generate-token"
     try:
+        print(f"Tentando gerar token em: {url}")
+        resp = requests.post(url, json={"secret": SECRET_KEY}, timeout=10)
+        
+        if resp.status_code == 200:
+            data = resp.json()
+            if 'token' in data: return data['token']
+            if 'session' in data: return data['session']['token']
+            
+        # Se não for 200, retorna o erro
+        error_msg = f"WPPConnect retornou {resp.status_code}: {resp.text}"
+        print(error_msg)
+        raise Exception(error_msg)
+        
     except Exception as e:
         print(f"Erro fatal ao conectar no WPPConnect: {e}")
         # Retorna o erro original para aparecer no frontend
