@@ -259,7 +259,7 @@ function App() {
 
     return (
         <div className={cn(
-            "rounded-md flex flex-col md:flex-row bg-gray-900 w-full flex-1 max-w-full mx-auto border border-neutral-700 overflow-hidden h-screen"
+            "rounded-md flex flex-col lg:flex-row bg-gray-900 w-full flex-1 max-w-full mx-auto border border-neutral-700 overflow-hidden h-screen"
         )}>
             {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
