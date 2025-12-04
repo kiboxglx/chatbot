@@ -1,4 +1,3 @@
-```python
 import requests
 import os
 from fastapi import APIRouter, HTTPException
@@ -109,4 +108,3 @@ def get_pairing_code(request: PairingRequest):
     na versão stable. Mas vamos deixar preparado caso usem uma versão beta que suporte.
     """
     raise HTTPException(status_code=400, detail="WPPConnect ainda não suporta Código de Pareamento via API. Use o QR Code.")
-```
