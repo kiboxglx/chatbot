@@ -6,6 +6,14 @@
     .animate-fade-in {
         animation: fadeIn 0.3s ease-in-out;
     }
+
+    .animate-slide-up {
+        animation: slideUp 0.3s ease-out;
+    }
+
+    .animate-bounce-slow {
+        animation: bounceSlow 3s infinite;
+    }
 }
 
 @keyframes fadeIn {
@@ -17,5 +25,27 @@
     to {
         opacity: 1;
         transform: translateY(0);
+    }
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(100%);
+    }
+
+    to {
+        transform: translateY(0);
+    }
+}
+
+@keyframes bounceSlow {
+
+    0%,
+    100% {
+        transform: translateY(-5%);
+    }
+
+    50% {
+        transform: translateY(5%);
     }
 }

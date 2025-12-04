@@ -12,7 +12,9 @@ import {
     MessageSquare,
     CheckCircle2,
     AlertCircle,
-    X
+    X,
+    Menu,
+    LogOut
 } from 'lucide-react';
 
 // Configuração da API
@@ -40,10 +42,10 @@ interface ConnectionStatus {
 
 // Componente de Toast Simples
 const Toast = ({ message, type, onClose }: { message: string, type: 'success' | 'error', onClose: () => void }) => (
-    <div className={`fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg transform transition-all duration-300 ${type === 'success' ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'
+    <div className={`fixed top-4 right-4 z-[60] flex items-center gap-3 px-4 py-3 rounded-xl shadow-2xl transform transition-all duration-300 animate-fade-in ${type === 'success' ? 'bg-emerald-600/90 text-white backdrop-blur-md' : 'bg-red-600/90 text-white backdrop-blur-md'
         }`}>
         {type === 'success' ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
-        <span className="font-medium">{message}</span>
+        <span className="font-medium text-sm">{message}</span>
         <button onClick={onClose} className="ml-2 hover:bg-white/20 rounded-full p-1">
             <X size={16} />
         </button>
@@ -68,7 +70,7 @@ function App() {
         checkConnection();
     }, []);
 
-    // Polling para verificar status da conexão a cada 10s se estiver na aba de conexão
+    // Polling para verificar status da conexão
     useEffect(() => {
         let interval: any;
         if (activeTab === 'connection') {
@@ -91,7 +93,6 @@ function App() {
             if (response.data.instance?.state === 'open' || response.data.state === 'open') {
                 setQrCode(null);
             } else if (activeTab === 'connection' && !qrCode) {
-                // Se desconectado e na aba, tenta pegar QR Code
                 fetchQrCode();
             }
         } catch (error) {
@@ -105,7 +106,7 @@ function App() {
             if (response.data.base64) {
                 setQrCode(response.data.base64);
             } else if (response.data.code) {
-                setQrCode(response.data.code); // Algumas versões retornam 'code'
+                setQrCode(response.data.code);
             }
         } catch (error) {
             console.error("Erro ao pegar QR Code", error);
@@ -162,7 +163,7 @@ function App() {
             showToast(`Bot ${newSettings.active ? 'ATIVADO' : 'DESATIVADO'} com sucesso!`, "success");
         } catch (error) {
             showToast("Erro ao alterar status do bot.", "error");
-            setSettings(settings); // Reverte em caso de erro
+            setSettings(settings);
         }
     };
 
@@ -199,14 +200,43 @@ function App() {
         client.cnpj_cpf.includes(searchTerm)
     );
 
+    const NavButton = ({ tab, icon: Icon, label }: { tab: typeof activeTab, icon: any, label: string }) => (
+        <button
+            onClick={() => setActiveTab(tab)}
+            className={`flex flex-col md:flex-row items-center justify-center md:justify-start gap-1 md:gap-3 px-2 md:px-4 py-2 md:py-3 rounded-xl transition-all duration-200 font-medium w-full md:w-auto
+                ${activeTab === tab
+                    ? 'text-emerald-400 md:bg-emerald-600 md:text-white md:shadow-lg md:shadow-emerald-900/20'
+                    : 'text-gray-400 hover:text-white md:hover:bg-gray-700/50'
+                } active:scale-95 md:active:scale-100`}
+        >
+            <Icon size={24} className={activeTab === tab ? "animate-pulse md:animate-none" : ""} />
+            <span className="text-[10px] md:text-sm">{label}</span>
+        </button>
+    );
+
     return (
-        <div className="min-h-screen bg-gray-900 text-gray-100 flex font-sans">
+        <div className="min-h-screen bg-gray-900 text-gray-100 flex flex-col md:flex-row font-sans selection:bg-emerald-500/30">
 
             {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
-            {/* Sidebar */}
-            <aside className="w-72 bg-gray-800 border-r border-gray-700 p-6 flex flex-col shadow-xl z-10">
-                <div className="flex items-center gap-3 mb-10 px-2">
+            {/* Mobile Header */}
+            <div className="md:hidden bg-gray-800/80 backdrop-blur-md border-b border-gray-700 p-4 flex items-center justify-between sticky top-0 z-40">
+                <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                        <MessageSquare className="text-white" size={18} />
+                    </div>
+                    <h1 className="text-lg font-bold text-white">Ana Chatbot</h1>
+                </div>
+                <div className={`w-2 h-2 rounded-full ${settings.active ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`}></div>
+            </div>
+
+            {/* Sidebar (Desktop) / Bottom Nav (Mobile) */}
+            <aside className="
+                fixed bottom-0 left-0 w-full h-16 bg-gray-800/90 backdrop-blur-lg border-t border-gray-700 z-50 flex flex-row justify-around items-center px-2
+                md:relative md:w-72 md:h-screen md:flex-col md:justify-start md:items-stretch md:bg-gray-800 md:border-r md:p-6 md:shadow-xl
+            ">
+                {/* Desktop Logo */}
+                <div className="hidden md:flex items-center gap-3 mb-10 px-2">
                     <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
                         <MessageSquare className="text-white" size={24} />
                     </div>
@@ -216,38 +246,15 @@ function App() {
                     </div>
                 </div>
 
-                <nav className="space-y-2 flex-1">
-                    <button
-                        onClick={() => setActiveTab('dashboard')}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-medium ${activeTab === 'dashboard' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/20' : 'text-gray-400 hover:bg-gray-700/50 hover:text-white'}`}
-                    >
-                        <LayoutDashboard size={20} />
-                        Visão Geral
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('connection')}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-medium ${activeTab === 'connection' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/20' : 'text-gray-400 hover:bg-gray-700/50 hover:text-white'}`}
-                    >
-                        <Activity size={20} />
-                        Conexão WhatsApp
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('clients')}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-medium ${activeTab === 'clients' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/20' : 'text-gray-400 hover:bg-gray-700/50 hover:text-white'}`}
-                    >
-                        <Users size={20} />
-                        Meus Clientes
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('settings')}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-medium ${activeTab === 'settings' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/20' : 'text-gray-400 hover:bg-gray-700/50 hover:text-white'}`}
-                    >
-                        <SettingsIcon size={20} />
-                        Inteligência da Ana
-                    </button>
+                <nav className="flex flex-row md:flex-col w-full md:space-y-2 justify-around md:justify-start">
+                    <NavButton tab="dashboard" icon={LayoutDashboard} label="Visão Geral" />
+                    <NavButton tab="connection" icon={Activity} label="Conexão" />
+                    <NavButton tab="clients" icon={Users} label="Clientes" />
+                    <NavButton tab="settings" icon={SettingsIcon} label="IA" />
                 </nav>
 
-                <div className="mt-auto pt-6 border-t border-gray-700">
+                {/* Desktop Status Footer */}
+                <div className="hidden md:block mt-auto pt-6 border-t border-gray-700">
                     <div className="flex items-center gap-3 px-2">
                         <div className={`w-3 h-3 rounded-full ${settings.active ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`}></div>
                         <span className="text-sm text-gray-400">Sistema {settings.active ? 'Online' : 'Offline'}</span>
@@ -256,58 +263,60 @@ function App() {
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 p-8 overflow-y-auto bg-gray-900">
+            <main className="flex-1 p-4 md:p-8 overflow-y-auto bg-gray-900 pb-24 md:pb-8">
 
                 {activeTab === 'dashboard' && (
-                    <div className="max-w-5xl mx-auto animate-fade-in">
-                        <header className="mb-10">
-                            <h2 className="text-3xl font-bold text-white mb-2">Olá, Contador! 👋</h2>
-                            <p className="text-gray-400">Aqui está o resumo da sua operação hoje.</p>
+                    <div className="max-w-5xl mx-auto animate-fade-in space-y-6">
+                        <header className="md:mb-10">
+                            <h2 className="text-2xl md:text-3xl font-bold text-white mb-1">Olá, Contador! 👋</h2>
+                            <p className="text-gray-400 text-sm md:text-base">Resumo da sua operação hoje.</p>
                         </header>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
                             {/* Status Card */}
-                            <div className={`p-6 rounded-2xl border transition-all duration-300 ${settings.active ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-red-500/10 border-red-500/20'}`}>
-                                <div className="flex justify-between items-start mb-4">
-                                    <div className={`p-3 rounded-xl ${settings.active ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'}`}>
+                            <div className={`p-6 rounded-2xl border transition-all duration-300 relative overflow-hidden ${settings.active ? 'bg-gradient-to-br from-emerald-500/10 to-emerald-900/10 border-emerald-500/20' : 'bg-gradient-to-br from-red-500/10 to-red-900/10 border-red-500/20'}`}>
+                                <div className="flex justify-between items-start mb-4 relative z-10">
+                                    <div className={`p-3 rounded-xl ${settings.active ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'bg-red-500 text-white shadow-lg shadow-red-500/20'}`}>
                                         <Activity size={24} />
                                     </div>
-                                    <label className="relative inline-flex items-center cursor-pointer">
+                                    <label className="relative inline-flex items-center cursor-pointer active:scale-95 transition-transform">
                                         <input type="checkbox" className="sr-only peer" checked={settings.active} onChange={toggleBot} />
-                                        <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                                        <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
                                     </label>
                                 </div>
-                                <h3 className="text-lg font-semibold text-white mb-1">Status do Robô</h3>
-                                <p className={`text-sm ${settings.active ? 'text-emerald-400' : 'text-red-400'}`}>
-                                    {settings.active ? 'Atendendo clientes automaticamente' : 'Pausado (Não responde ninguém)'}
+                                <h3 className="text-lg font-semibold text-white mb-1 relative z-10">Status do Robô</h3>
+                                <p className={`text-sm relative z-10 ${settings.active ? 'text-emerald-400' : 'text-red-400'}`}>
+                                    {settings.active ? 'Ativo e respondendo' : 'Pausado'}
                                 </p>
                             </div>
 
                             {/* Connection Card */}
-                            <div onClick={() => setActiveTab('connection')} className="bg-gray-800 p-6 rounded-2xl border border-gray-700 hover:border-gray-600 transition-colors cursor-pointer">
-                                <div className="flex items-center gap-4 mb-4">
+                            <div onClick={() => setActiveTab('connection')} className="bg-gray-800 p-6 rounded-2xl border border-gray-700 active:scale-[0.98] hover:border-gray-600 transition-all cursor-pointer relative group">
+                                <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl"></div>
+                                <div className="flex items-center gap-4 mb-4 relative z-10">
                                     <div className={`p-3 rounded-xl ${connectionStatus.instance?.state === 'open' || connectionStatus.state === 'open' ? 'bg-blue-500/20 text-blue-400' : 'bg-orange-500/20 text-orange-400'}`}>
                                         <CheckCircle2 size={24} />
                                     </div>
                                 </div>
-                                <h3 className="text-lg font-bold text-white mb-1">
+                                <h3 className="text-lg font-bold text-white mb-1 relative z-10">
                                     {connectionStatus.instance?.state === 'open' || connectionStatus.state === 'open' ? 'WhatsApp Conectado' : 'WhatsApp Desconectado'}
                                 </h3>
-                                <p className="text-sm text-gray-400">Clique para gerenciar</p>
+                                <p className="text-sm text-gray-400 relative z-10">Toque para gerenciar</p>
                             </div>
 
                             {/* Quick Action */}
                             <button
                                 onClick={() => { setActiveTab('clients'); setShowModal(true); }}
-                                className="bg-gray-800 p-6 rounded-2xl border border-gray-700 hover:border-emerald-500/50 hover:bg-gray-750 transition-all group text-left"
+                                className="bg-gray-800 p-6 rounded-2xl border border-gray-700 active:scale-[0.98] hover:border-emerald-500/50 hover:bg-gray-750 transition-all group text-left relative overflow-hidden"
                             >
-                                <div className="flex items-center gap-4 mb-4">
-                                    <div className="p-3 bg-purple-500/20 text-purple-400 rounded-xl group-hover:bg-purple-500 group-hover:text-white transition-colors">
+                                <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-pink-500/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                <div className="flex items-center gap-4 mb-4 relative z-10">
+                                    <div className="p-3 bg-purple-500/20 text-purple-400 rounded-xl group-hover:bg-purple-500 group-hover:text-white transition-colors shadow-lg shadow-purple-500/10">
                                         <UserPlus size={24} />
                                     </div>
                                 </div>
-                                <h3 className="text-lg font-semibold text-white mb-1">Novo Cliente</h3>
-                                <p className="text-sm text-gray-400">Cadastrar empresa rapidamente</p>
+                                <h3 className="text-lg font-semibold text-white mb-1 relative z-10">Novo Cliente</h3>
+                                <p className="text-sm text-gray-400 relative z-10">Cadastrar empresa</p>
                             </button>
                         </div>
                     </div>
@@ -315,41 +324,42 @@ function App() {
 
                 {activeTab === 'connection' && (
                     <div className="max-w-4xl mx-auto animate-fade-in">
-                        <header className="mb-8">
-                            <h2 className="text-3xl font-bold text-white">Conexão WhatsApp</h2>
-                            <p className="text-gray-400">Escaneie o QR Code para conectar o número do escritório.</p>
+                        <header className="mb-6 md:mb-8">
+                            <h2 className="text-2xl md:text-3xl font-bold text-white">Conexão WhatsApp</h2>
+                            <p className="text-gray-400 text-sm md:text-base">Escaneie o QR Code para conectar.</p>
                         </header>
 
-                        <div className="bg-gray-800 rounded-2xl border border-gray-700 p-8 shadow-xl flex flex-col items-center text-center">
+                        <div className="bg-gray-800 rounded-2xl border border-gray-700 p-6 md:p-8 shadow-xl flex flex-col items-center text-center">
                             {connectionStatus.instance?.state === 'open' || connectionStatus.state === 'open' ? (
-                                <div className="py-10">
-                                    <div className="w-24 h-24 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                                        <CheckCircle2 size={48} className="text-emerald-500" />
+                                <div className="py-6 md:py-10">
+                                    <div className="w-20 h-20 md:w-24 md:h-24 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce-slow">
+                                        <CheckCircle2 size={40} className="text-emerald-500 md:w-12 md:h-12" />
                                     </div>
-                                    <h3 className="text-2xl font-bold text-white mb-2">WhatsApp Conectado!</h3>
-                                    <p className="text-gray-400 mb-8">O sistema está pronto para enviar e receber mensagens.</p>
+                                    <h3 className="text-xl md:text-2xl font-bold text-white mb-2">WhatsApp Conectado!</h3>
+                                    <p className="text-gray-400 mb-8 text-sm md:text-base">O sistema está pronto para enviar e receber mensagens.</p>
 
                                     <button
                                         onClick={handleLogout}
-                                        className="bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white px-6 py-3 rounded-xl transition-all font-medium border border-red-600/20"
+                                        className="flex items-center gap-2 bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white px-6 py-3 rounded-xl transition-all font-medium border border-red-600/20 active:scale-95"
                                     >
-                                        Desconectar WhatsApp
+                                        <LogOut size={18} />
+                                        Desconectar
                                     </button>
                                 </div>
                             ) : (
-                                <div className="py-6">
-                                    <div className="bg-white p-4 rounded-xl mb-6 inline-block">
+                                <div className="py-4 md:py-6 w-full">
+                                    <div className="bg-white p-4 rounded-xl mb-6 inline-block shadow-lg">
                                         {qrCode ? (
-                                            <img src={qrCode} alt="QR Code WhatsApp" className="w-64 h-64 object-contain" />
+                                            <img src={qrCode} alt="QR Code WhatsApp" className="w-56 h-56 md:w-64 md:h-64 object-contain" />
                                         ) : (
-                                            <div className="w-64 h-64 flex items-center justify-center text-gray-400 bg-gray-100 rounded-lg">
+                                            <div className="w-56 h-56 md:w-64 md:h-64 flex items-center justify-center text-gray-400 bg-gray-100 rounded-lg">
                                                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
                                             </div>
                                         )}
                                     </div>
-                                    <h3 className="text-xl font-bold text-white mb-2">Escaneie com seu celular</h3>
-                                    <p className="text-gray-400 max-w-md mx-auto">
-                                        Abra o WhatsApp no seu celular, vá em Configurações {'>'} Aparelhos Conectados {'>'} Conectar Aparelho.
+                                    <h3 className="text-lg md:text-xl font-bold text-white mb-2">Escaneie com seu celular</h3>
+                                    <p className="text-gray-400 max-w-md mx-auto text-sm md:text-base">
+                                        Abra o WhatsApp {'>'} Configurações {'>'} Aparelhos Conectados.
                                     </p>
                                 </div>
                             )}
@@ -359,14 +369,14 @@ function App() {
 
                 {activeTab === 'clients' && (
                     <div className="max-w-5xl mx-auto animate-fade-in">
-                        <header className="flex justify-between items-center mb-8">
+                        <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                             <div>
-                                <h2 className="text-3xl font-bold text-white">Meus Clientes</h2>
-                                <p className="text-gray-400">Gerencie quem tem acesso ao atendimento.</p>
+                                <h2 className="text-2xl md:text-3xl font-bold text-white">Meus Clientes</h2>
+                                <p className="text-gray-400 text-sm md:text-base">Gerencie quem tem acesso.</p>
                             </div>
                             <button
                                 onClick={() => setShowModal(true)}
-                                className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl transition-all shadow-lg shadow-emerald-900/20 font-medium"
+                                className="w-full md:w-auto flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl transition-all shadow-lg shadow-emerald-900/20 font-medium active:scale-95"
                             >
                                 <UserPlus size={20} />
                                 Novo Cliente
@@ -374,20 +384,49 @@ function App() {
                         </header>
 
                         <div className="bg-gray-800 rounded-2xl border border-gray-700 overflow-hidden shadow-xl">
-                            <div className="p-6 border-b border-gray-700 flex justify-between items-center bg-gray-800/50">
-                                <div className="relative w-full max-w-md">
+                            <div className="p-4 md:p-6 border-b border-gray-700 bg-gray-800/50 sticky top-0 z-20 backdrop-blur-sm">
+                                <div className="relative w-full">
                                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={20} />
                                     <input
                                         type="text"
-                                        placeholder="Buscar por nome, empresa ou telefone..."
+                                        placeholder="Buscar cliente..."
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="w-full bg-gray-900 border border-gray-700 rounded-xl pl-12 pr-4 py-3 text-gray-200 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                                        className="w-full bg-gray-900 border border-gray-700 rounded-xl pl-12 pr-4 py-3 text-gray-200 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-base"
                                     />
                                 </div>
                             </div>
 
-                            <div className="overflow-x-auto">
+                            {/* Mobile List View */}
+                            <div className="md:hidden divide-y divide-gray-700">
+                                {loading ? (
+                                    <div className="p-8 text-center text-gray-500">Carregando...</div>
+                                ) : filteredClients.length === 0 ? (
+                                    <div className="p-8 text-center text-gray-500">Nenhum cliente encontrado.</div>
+                                ) : filteredClients.map((client) => (
+                                    <div key={client.id} className="p-4 active:bg-gray-700/50 transition-colors">
+                                        <div className="flex justify-between items-start mb-2">
+                                            <div>
+                                                <h3 className="font-bold text-white text-lg">{client.nome}</h3>
+                                                <p className="text-emerald-400 text-sm font-medium">{client.empresa_nome}</p>
+                                            </div>
+                                            <button
+                                                onClick={() => handleDelete(client.id)}
+                                                className="text-gray-500 hover:text-red-400 p-2"
+                                            >
+                                                <Trash2 size={20} />
+                                            </button>
+                                        </div>
+                                        <div className="flex flex-col gap-1 text-sm text-gray-400 font-mono">
+                                            <p>📞 {client.telefone}</p>
+                                            <p>🆔 {client.cnpj_cpf}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Desktop Table View */}
+                            <div className="hidden md:block overflow-x-auto">
                                 <table className="w-full text-left">
                                     <thead className="bg-gray-900/50 text-gray-400 uppercase text-xs font-medium">
                                         <tr>
@@ -429,48 +468,40 @@ function App() {
 
                 {activeTab === 'settings' && (
                     <div className="max-w-4xl mx-auto animate-fade-in">
-                        <header className="mb-8">
-                            <h2 className="text-3xl font-bold text-white">Inteligência da Ana</h2>
-                            <p className="text-gray-400">Configure como sua secretária virtual deve se comportar.</p>
+                        <header className="mb-6 md:mb-8">
+                            <h2 className="text-2xl md:text-3xl font-bold text-white">Inteligência da Ana</h2>
+                            <p className="text-gray-400 text-sm md:text-base">Configure o comportamento da IA.</p>
                         </header>
 
-                        <div className="bg-gray-800 rounded-2xl border border-gray-700 p-8 shadow-xl">
-                            <div className="flex items-start gap-6 mb-8">
-                                <div className="p-4 bg-emerald-500/10 rounded-xl">
-                                    <MessageSquare size={32} className="text-emerald-500" />
+                        <div className="bg-gray-800 rounded-2xl border border-gray-700 p-4 md:p-8 shadow-xl">
+                            <div className="flex items-start gap-4 md:gap-6 mb-6 md:mb-8">
+                                <div className="p-3 md:p-4 bg-emerald-500/10 rounded-xl">
+                                    <MessageSquare size={24} className="text-emerald-500 md:w-8 md:h-8" />
                                 </div>
                                 <div className="flex-1">
-                                    <h3 className="text-xl font-bold text-white mb-2">Personalidade e Regras</h3>
-                                    <p className="text-gray-400 text-sm leading-relaxed">
-                                        Este é o "cérebro" da Ana. Tudo o que você escrever aqui servirá de instrução para ela.
-                                        <br />
-                                        <strong>Dica:</strong> Seja claro sobre o tom de voz (formal/informal) e o que ela NÃO deve fazer.
+                                    <h3 className="text-lg md:text-xl font-bold text-white mb-1 md:mb-2">Personalidade</h3>
+                                    <p className="text-gray-400 text-xs md:text-sm leading-relaxed">
+                                        Defina como a Ana deve falar e quais regras seguir.
                                     </p>
                                 </div>
                             </div>
 
-                            <div className="mb-8">
-                                <label className="block text-sm font-medium text-gray-300 mb-3 uppercase tracking-wider">Instruções do Sistema</label>
+                            <div className="mb-6 md:mb-8">
+                                <label className="block text-xs md:text-sm font-medium text-gray-300 mb-2 md:mb-3 uppercase tracking-wider">Instruções do Sistema</label>
                                 <div className="relative">
                                     <textarea
                                         value={settings.system_prompt}
                                         onChange={(e) => setSettings({ ...settings, system_prompt: e.target.value })}
-                                        className="w-full h-96 bg-gray-900 border border-gray-700 rounded-xl p-6 text-gray-300 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none font-mono text-sm leading-relaxed resize-none shadow-inner"
+                                        className="w-full h-64 md:h-96 bg-gray-900 border border-gray-700 rounded-xl p-4 md:p-6 text-gray-300 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none font-mono text-sm leading-relaxed resize-none shadow-inner"
                                         placeholder="Ex: Você é uma assistente contábil..."
                                     />
-                                    <div className="absolute bottom-4 right-4 text-xs text-gray-600">
-                                        Suporta Markdown
-                                    </div>
                                 </div>
                             </div>
 
-                            <div className="flex items-center justify-between pt-6 border-t border-gray-700">
-                                <div className="text-sm text-gray-500">
-                                    Última alteração não salva...
-                                </div>
+                            <div className="flex items-center justify-end pt-6 border-t border-gray-700">
                                 <button
                                     onClick={handleSaveSettings}
-                                    className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3 rounded-xl transition-all shadow-lg shadow-emerald-900/20 font-bold"
+                                    className="w-full md:w-auto flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3 rounded-xl transition-all shadow-lg shadow-emerald-900/20 font-bold active:scale-95"
                                 >
                                     <Save size={20} />
                                     Salvar Alterações
@@ -482,23 +513,23 @@ function App() {
 
                 {/* Modal */}
                 {showModal && (
-                    <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm z-50 animate-fade-in">
-                        <div className="bg-gray-800 rounded-2xl p-8 w-full max-w-md border border-gray-700 shadow-2xl transform transition-all scale-100">
+                    <div className="fixed inset-0 bg-black/80 flex items-end md:items-center justify-center p-0 md:p-4 backdrop-blur-sm z-[70] animate-fade-in">
+                        <div className="bg-gray-800 rounded-t-2xl md:rounded-2xl p-6 md:p-8 w-full max-w-md border-t md:border border-gray-700 shadow-2xl transform transition-all animate-slide-up md:animate-none">
                             <div className="flex justify-between items-center mb-6">
                                 <h3 className="text-2xl font-bold text-white">Novo Cliente</h3>
-                                <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-white">
+                                <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-white p-2">
                                     <X size={24} />
                                 </button>
                             </div>
 
-                            <form onSubmit={handleSubmit} className="space-y-5">
+                            <form onSubmit={handleSubmit} className="space-y-4 md:space-y-5">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-400 mb-1.5">Nome Completo</label>
                                     <input
                                         required
                                         value={formData.nome}
                                         onChange={e => setFormData({ ...formData, nome: e.target.value })}
-                                        className="w-full bg-gray-900 border border-gray-700 rounded-xl p-3 text-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all"
+                                        className="w-full bg-gray-900 border border-gray-700 rounded-xl p-3 text-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all text-base"
                                         placeholder="Ex: João Silva"
                                     />
                                 </div>
@@ -508,7 +539,7 @@ function App() {
                                         required
                                         value={formData.empresa_nome}
                                         onChange={e => setFormData({ ...formData, empresa_nome: e.target.value })}
-                                        className="w-full bg-gray-900 border border-gray-700 rounded-xl p-3 text-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all"
+                                        className="w-full bg-gray-900 border border-gray-700 rounded-xl p-3 text-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all text-base"
                                         placeholder="Ex: Silva LTDA"
                                     />
                                 </div>
@@ -516,12 +547,12 @@ function App() {
                                     <label className="block text-sm font-medium text-gray-400 mb-1.5">WhatsApp (com DDD)</label>
                                     <input
                                         required
+                                        type="tel"
                                         placeholder="Ex: 5511999999999"
                                         value={formData.telefone}
                                         onChange={e => setFormData({ ...formData, telefone: e.target.value })}
-                                        className="w-full bg-gray-900 border border-gray-700 rounded-xl p-3 text-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all"
+                                        className="w-full bg-gray-900 border border-gray-700 rounded-xl p-3 text-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all text-base"
                                     />
-                                    <p className="text-xs text-gray-500 mt-1">Importante: Use o formato internacional (55 + DDD + Número)</p>
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-400 mb-1.5">CNPJ ou CPF</label>
@@ -529,23 +560,23 @@ function App() {
                                         required
                                         value={formData.cnpj_cpf}
                                         onChange={e => setFormData({ ...formData, cnpj_cpf: e.target.value })}
-                                        className="w-full bg-gray-900 border border-gray-700 rounded-xl p-3 text-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all"
+                                        className="w-full bg-gray-900 border border-gray-700 rounded-xl p-3 text-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all text-base"
                                         placeholder="00.000.000/0001-00"
                                     />
                                 </div>
-                                <div className="flex justify-end gap-3 mt-8">
+                                <div className="flex gap-3 mt-8 pt-4">
                                     <button
                                         type="button"
                                         onClick={() => setShowModal(false)}
-                                        className="px-6 py-3 text-gray-400 hover:text-white font-medium transition-colors"
+                                        className="flex-1 px-6 py-3 text-gray-400 hover:text-white font-medium transition-colors active:scale-95"
                                     >
                                         Cancelar
                                     </button>
                                     <button
                                         type="submit"
-                                        className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-emerald-900/20 transition-all"
+                                        className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-emerald-900/20 transition-all active:scale-95"
                                     >
-                                        Salvar Cliente
+                                        Salvar
                                     </button>
                                 </div>
                             </form>
