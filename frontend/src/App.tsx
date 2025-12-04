@@ -20,7 +20,8 @@ import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 
 // Configuração da API
-const API_URL = import.meta.env.VITE_API_URL || '';
+// Em produção, usa a URL do Railway se a variável de ambiente não estiver definida
+const API_URL = import.meta.env.VITE_API_URL || 'https://chatbot-production.up.railway.app';
 
 interface Client {
     id: number;

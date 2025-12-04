@@ -33,25 +33,43 @@ def get_status():
 def get_qrcode():
     """Gera o QR Code para conexão"""
     try:
-        # Primeiro, garante que a instância existe
-        requests.post(
-            f"{EVOLUTION_URL}/instance/create", 
-            json={"instanceName": INSTANCE, "qrcode": True}, 
-            headers=headers
-        )
+        # 1. Tenta criar a instância (se não existir)
+        create_url = f"{EVOLUTION_URL}/instance/create"
+        create_payload = {
+            "instanceName": INSTANCE,
+            "qrcode": True,
+            "integration": "WHATSAPP-BAILEYS"
+        }
+        requests.post(create_url, json=create_payload, headers=headers)
         
-        # Pede o connect (retorna base64 ou json)
-        url = f"{EVOLUTION_URL}/instance/connect/{INSTANCE}"
-        resp = requests.get(url, headers=headers, timeout=10)
+        # 2. Tenta conectar (gerar QR Code)
+        connect_url = f"{EVOLUTION_URL}/instance/connect/{INSTANCE}"
+        resp = requests.get(connect_url, headers=headers, timeout=10)
         
         if resp.status_code == 200:
-            data = resp.json()
-            # Evolution v1.7 retorna { "base64": "..." } ou { "code": "..." }
-            return data
+            return resp.json()
+            
+        # Se falhar (ex: já conectado ou erro), tenta verificar o status
+        status_url = f"{EVOLUTION_URL}/instance/connectionState/{INSTANCE}"
+        status_resp = requests.get(status_url, headers=headers)
         
-        raise HTTPException(status_code=400, detail="Não foi possível gerar QR Code")
+        if status_resp.status_code == 200:
+            state = status_resp.json().get('instance', {}).get('state')
+            if state == 'open':
+                return {"status": "connected", "message": "WhatsApp já conectado"}
+        
+        # Se chegou aqui, tenta forçar logout e tentar de novo (recuperação)
+        requests.delete(f"{EVOLUTION_URL}/instance/logout/{INSTANCE}", headers=headers)
+        
+        # Tenta conectar novamente após logout
+        resp_retry = requests.get(connect_url, headers=headers, timeout=10)
+        if resp_retry.status_code == 200:
+            return resp_retry.json()
+
+        raise HTTPException(status_code=400, detail="Não foi possível gerar QR Code. Tente novamente em instantes.")
         
     except Exception as e:
+        print(f"Erro QR Code: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/management/logout")
