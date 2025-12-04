@@ -12,16 +12,16 @@ import {
     MessageSquare,
     CheckCircle2,
     AlertCircle,
-    X,
-    LogOut
+    X
 } from 'lucide-react';
 import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
+import WhatsAppConnection from './components/WhatsAppConnection';
 
 // Configuração da API
 // Em produção, usa a URL do Railway se a variável de ambiente não estiver definida
-const API_URL = import.meta.env.VITE_API_URL || 'https://chatbot-production.up.railway.app';
+const API_URL = import.meta.env.VITE_API_URL || 'https://chatbot-production-e324.up.railway.app';
 
 interface Client {
     id: number;
@@ -36,12 +36,7 @@ interface SettingsData {
     active: boolean;
 }
 
-interface ConnectionStatus {
-    state: string;
-    instance?: {
-        state: string;
-    };
-}
+
 
 // Componente de Toast Simples
 const Toast = ({ message, type, onClose }: { message: string, type: 'success' | 'error', onClose: () => void }) => (
@@ -86,8 +81,7 @@ function App() {
     const [activeTab, setActiveTab] = useState<'dashboard' | 'clients' | 'settings' | 'connection'>('dashboard');
     const [clients, setClients] = useState<Client[]>([]);
     const [settings, setSettings] = useState<SettingsData>({ system_prompt: '', active: true });
-    const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>({ state: 'CHECKING' });
-    const [qrCode, setQrCode] = useState<string | null>(null);
+
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [formData, setFormData] = useState({ nome: '', telefone: '', empresa_nome: '', cnpj_cpf: '' });
@@ -98,64 +92,16 @@ function App() {
     useEffect(() => {
         fetchClients();
         fetchSettings();
-        checkConnection();
     }, []);
 
-    // Polling para verificar status da conexão
-    useEffect(() => {
-        let interval: any;
-        if (activeTab === 'connection') {
-            checkConnection();
-            interval = setInterval(checkConnection, 5000);
-        }
-        return () => clearInterval(interval);
-    }, [activeTab]);
+
 
     const showToast = (message: string, type: 'success' | 'error') => {
         setToast({ message, type });
         setTimeout(() => setToast(null), 3000);
     };
 
-    const checkConnection = async () => {
-        try {
-            const response = await axios.get(`${API_URL}/management/status`);
-            setConnectionStatus(response.data);
 
-            if (response.data.instance?.state === 'open' || response.data.state === 'open') {
-                setQrCode(null);
-            } else if (activeTab === 'connection' && !qrCode) {
-                fetchQrCode();
-            }
-        } catch (error) {
-            console.error("Erro ao checar conexão", error);
-        }
-    };
-
-    const fetchQrCode = async () => {
-        try {
-            const response = await axios.get(`${API_URL}/management/qrcode`);
-            if (response.data.base64) {
-                setQrCode(response.data.base64);
-            } else if (response.data.code) {
-                setQrCode(response.data.code);
-            }
-        } catch (error) {
-            console.error("Erro ao pegar QR Code", error);
-        }
-    };
-
-    const handleLogout = async () => {
-        if (confirm("Tem certeza que deseja desconectar o WhatsApp?")) {
-            try {
-                await axios.post(`${API_URL}/management/logout`);
-                showToast("Desconectado com sucesso.", "success");
-                checkConnection();
-                fetchQrCode();
-            } catch (error) {
-                showToast("Erro ao desconectar.", "error");
-            }
-        }
-    };
 
     const fetchClients = async () => {
         try {
@@ -323,12 +269,12 @@ function App() {
                             <div onClick={() => setActiveTab('connection')} className="bg-gray-800 p-6 rounded-2xl border border-gray-700 active:scale-[0.98] hover:border-gray-600 transition-all cursor-pointer relative group">
                                 <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl"></div>
                                 <div className="flex items-center gap-4 mb-4 relative z-10">
-                                    <div className={`p-3 rounded-xl ${connectionStatus.instance?.state === 'open' || connectionStatus.state === 'open' ? 'bg-blue-500/20 text-blue-400' : 'bg-orange-500/20 text-orange-400'}`}>
+                                    <div className="p-3 rounded-xl bg-blue-500/20 text-blue-400">
                                         <CheckCircle2 size={24} />
                                     </div>
                                 </div>
                                 <h3 className="text-lg font-bold text-white mb-1 relative z-10">
-                                    {connectionStatus.instance?.state === 'open' || connectionStatus.state === 'open' ? 'WhatsApp Conectado' : 'WhatsApp Desconectado'}
+                                    Conexão WhatsApp
                                 </h3>
                                 <p className="text-sm text-gray-400 relative z-10">Toque para gerenciar</p>
                             </div>
@@ -351,48 +297,16 @@ function App() {
                     </div>
                 )}
 
+
+
                 {activeTab === 'connection' && (
                     <div className="max-w-4xl mx-auto animate-fade-in">
                         <header className="mb-6 md:mb-8">
                             <h2 className="text-2xl md:text-3xl font-bold text-white">Conexão WhatsApp</h2>
-                            <p className="text-gray-400 text-sm md:text-base">Escaneie o QR Code para conectar.</p>
+                            <p className="text-gray-400 text-sm md:text-base">Gerencie a conexão do seu assistente.</p>
                         </header>
 
-                        <div className="bg-gray-800 rounded-2xl border border-gray-700 p-6 md:p-8 shadow-xl flex flex-col items-center text-center">
-                            {connectionStatus.instance?.state === 'open' || connectionStatus.state === 'open' ? (
-                                <div className="py-6 md:py-10">
-                                    <div className="w-20 h-20 md:w-24 md:h-24 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce-slow">
-                                        <CheckCircle2 size={40} className="text-emerald-500 md:w-12 md:h-12" />
-                                    </div>
-                                    <h3 className="text-xl md:text-2xl font-bold text-white mb-2">WhatsApp Conectado!</h3>
-                                    <p className="text-gray-400 mb-8 text-sm md:text-base">O sistema está pronto para enviar e receber mensagens.</p>
-
-                                    <button
-                                        onClick={handleLogout}
-                                        className="flex items-center gap-2 bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white px-6 py-3 rounded-xl transition-all font-medium border border-red-600/20 active:scale-95"
-                                    >
-                                        <LogOut size={18} />
-                                        Desconectar
-                                    </button>
-                                </div>
-                            ) : (
-                                <div className="py-4 md:py-6 w-full">
-                                    <div className="bg-white p-4 rounded-xl mb-6 inline-block shadow-lg">
-                                        {qrCode ? (
-                                            <img src={qrCode} alt="QR Code WhatsApp" className="w-56 h-56 md:w-64 md:h-64 object-contain" />
-                                        ) : (
-                                            <div className="w-56 h-56 md:w-64 md:h-64 flex items-center justify-center text-gray-400 bg-gray-100 rounded-lg">
-                                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-                                            </div>
-                                        )}
-                                    </div>
-                                    <h3 className="text-lg md:text-xl font-bold text-white mb-2">Escaneie com seu celular</h3>
-                                    <p className="text-gray-400 max-w-md mx-auto text-sm md:text-base">
-                                        Abra o WhatsApp {'>'} Configurações {'>'} Aparelhos Conectados.
-                                    </p>
-                                </div>
-                            )}
-                        </div>
+                        <WhatsAppConnection />
                     </div>
                 )}
 
