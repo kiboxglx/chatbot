@@ -18,7 +18,9 @@ import {
 } from 'lucide-react';
 
 // Configuração da API
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+// Em produção (Railway), a API é servida na mesma origem, então deixamos vazio.
+// Em desenvolvimento local, usa localhost:8000.
+const API_URL = import.meta.env.VITE_API_URL || '';
 
 interface Client {
     id: number;
