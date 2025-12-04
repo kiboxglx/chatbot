@@ -93,7 +93,6 @@ networks:
     driver: bridge
 
 volumes:
-  n8n_data:
   evolution_instances:
   evolution_store:
   evolution_pgdata:
