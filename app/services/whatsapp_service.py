@@ -10,8 +10,8 @@ class WhatsAppService:
     def __init__(self):
         # Lê a URL da API do arquivo .env. Se não existir, usa localhost como fallback seguro.
         self.api_url = os.getenv("WHATSAPP_API_URL", "http://localhost:8080")
-        # Token de autenticação pode ser necessário no futuro, por enquanto deixamos preparado
-        self.api_token = os.getenv("WHATSAPP_API_TOKEN", "")
+        # API Key para autenticação na Evolution API
+        self.api_token = os.getenv("AUTHENTICATION_API_KEY", "")
 
     def enviar_texto(self, numero: str, mensagem: str) -> dict:
         """
