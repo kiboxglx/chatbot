@@ -127,8 +127,10 @@ function App() {
         try {
             await axios.post(`${API_URL}/settings`, settings);
             showToast("Configurações salvas com sucesso!", "success");
-        } catch (error) {
-            showToast("Erro ao salvar configurações.", "error");
+        } catch (error: any) {
+            console.error("Erro detalhado:", error);
+            const msg = error.response?.data?.detail || error.message || "Erro desconhecido";
+            showToast(`Erro ao salvar: ${msg}`, "error");
         }
     };
 
