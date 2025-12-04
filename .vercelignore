@@ -1,26 +1,6 @@
-# Ignorar tudo do backend Python
-*.py
-app/
-__pycache__/
-venv/
-.env
-requirements.txt
-Procfile
-runtime.txt
-railway.toml
-docker-compose.yml
-docker-compose.railway.yml
-Dockerfile
-nixpacks.toml
+# Ignorar TUDO por padrão
+*
 
-# Ignorar scripts de configuração
-configurar_*.py
-diagnostico_*.py
-testar_*.py
-verificar_*.py
-debug_*.py
-
-# Manter apenas o frontend e configurações essenciais
+# Permitir apenas a pasta frontend e arquivos de configuração do Vercel
 !frontend/
 !vercel.json
-!package.json
