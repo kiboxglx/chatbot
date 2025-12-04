@@ -79,60 +79,57 @@ def get_qrcode():
 def get_pairing_code(request: PairingRequest):
     """Gera código de pareamento para conexão sem QR Code"""
     try:
-        # 1. Para Pairing Code funcionar, a instância NÃO pode ter QR Code ativo
-        # Vamos tentar deletar e recriar a instância sem QR Code
-        # Isso é drástico, mas necessário se ela estiver presa no modo QR Code
-        
-        # Verifica status primeiro
-        status_url = f"{EVOLUTION_URL}/instance/connectionState/{INSTANCE}"
+        # 1. LIMPEZA TOTAL: Deleta a instância para começar do zero
+        # Isso evita conflitos com QR Codes antigos ou estados travados
+        delete_url = f"{EVOLUTION_URL}/instance/delete/{INSTANCE}"
         try:
-            status_resp = requests.get(status_url, headers=headers, timeout=5)
-            if status_resp.status_code == 200:
-                state = status_resp.json().get('instance', {}).get('state')
-                if state == 'open':
-                    return {"status": "connected", "message": "WhatsApp já conectado"}
+            requests.delete(delete_url, headers=headers, timeout=5)
         except:
-            pass
+            pass # Ignora erro se não existir
 
-        # Recria instância SEM QR Code (qrcode: False)
-        # Isso é crucial para o Pairing Code funcionar em algumas versões
+        # 2. CRIAÇÃO: Cria nova instância SEM QR Code
         create_url = f"{EVOLUTION_URL}/instance/create"
         create_payload = {
             "instanceName": INSTANCE,
-            "qrcode": False,  # IMPORTANTE: False para permitir Pairing Code
+            "qrcode": False,  # False é essencial para Pairing Code
             "integration": "WHATSAPP-BAILEYS"
         }
+        create_resp = requests.post(create_url, json=create_payload, headers=headers, timeout=10)
         
-        # Tenta criar (se já existir, pode dar erro, mas seguimos)
-        requests.post(create_url, json=create_payload, headers=headers)
-        
-        # 2. Solicita o código de pareamento
+        if create_resp.status_code not in [200, 201]:
+            raise HTTPException(status_code=400, detail=f"Erro ao criar instância: {create_resp.text}")
+
+        # 3. SOLICITAÇÃO: Pede o código
         phone = "".join(filter(str.isdigit, request.number))
         
-        # TENTATIVA 1: GET /instance/connect/{instance}?number=...
+        # TENTATIVA 1: Endpoint padrão de conexão (GET com number na query)
         connect_url = f"{EVOLUTION_URL}/instance/connect/{INSTANCE}"
         resp = requests.get(connect_url, headers=headers, params={"number": phone}, timeout=20)
         
         if resp.status_code == 200:
             data = resp.json()
-            # Verifica se veio o pairingCode
             if data.get('pairingCode'):
                 return data
-            if data.get('code') and len(data.get('code')) < 20: # Garante que é curto
+            if data.get('code'):
                 return {"pairingCode": data.get('code')}
                 
-        # TENTATIVA 2: POST /instance/pairingCode/{instance}
+        # TENTATIVA 2: Endpoint alternativo (POST com number no body)
         pairing_url = f"{EVOLUTION_URL}/instance/pairingCode/{INSTANCE}"
         resp2 = requests.post(pairing_url, headers=headers, json={"number": phone}, timeout=20)
         
         if resp2.status_code == 200:
              return resp2.json()
 
-        raise HTTPException(status_code=400, detail=f"Erro ao gerar código. Verifique se o número está correto.")
+        # Se falhar, retorna o erro exato da API para debug
+        error_details = f"Tentativa 1: {resp.status_code} - {resp.text} | Tentativa 2: {resp2.status_code} - {resp2.text}"
+        print(f"Falha Pairing Code: {error_details}")
+        raise HTTPException(status_code=400, detail=f"Falha na API: {error_details}")
         
+    except HTTPException as he:
+        raise he
     except Exception as e:
-        print(f"Erro Pairing Code: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"Erro Interno Pairing Code: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
 
 @router.post("/management/logout")
 def logout():
