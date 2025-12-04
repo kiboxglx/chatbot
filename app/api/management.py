@@ -1,5 +1,5 @@
+```python
 import requests
-import base64
 import os
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -9,134 +9,104 @@ class PairingRequest(BaseModel):
 
 router = APIRouter()
 
-# Configurações da Evolution API
-# Usa variável de ambiente se existir, senão usa o padrão do Docker local
-EVOLUTION_URL = os.getenv("WHATSAPP_API_URL", "http://evolution_api:8080")
-API_KEY = os.getenv("AUTHENTICATION_API_KEY", "429683C4C977415CAAFCCE10F7D57E11")
-INSTANCE = "chatbot"
+# Configurações do WPPConnect
+BASE_URL = os.getenv("WHATSAPP_API_URL", "http://localhost:8080")
+SECRET_KEY = os.getenv("AUTHENTICATION_API_KEY", "123Cartoon*")
+SESSION = "chatbot"
 
-headers = {
-    "apikey": API_KEY
-}
+def get_token():
+    """Gera token para operações administrativas"""
+    try:
+        url = f"{BASE_URL}/api/{SESSION}/{SECRET_KEY}/generate-token"
+        resp = requests.post(url, json={"secret": SECRET_KEY}, timeout=5)
+        if resp.status_code == 200:
+            data = resp.json()
+            if 'token' in data: return data['token']
+            if 'session' in data: return data['session']['token']
+    except Exception as e:
+        print(f"Erro ao gerar token: {e}")
+    return None
+
+def get_headers():
+    token = get_token()
+    return {"Authorization": f"Bearer {token}"} if token else {}
 
 @router.get("/management/status")
 def get_status():
-    """Verifica se o WhatsApp está conectado"""
+    """Verifica status da sessão"""
     try:
-        url = f"{EVOLUTION_URL}/instance/connectionState/{INSTANCE}"
+        # WPPConnect: GET /api/{session}/status-session
+        url = f"{BASE_URL}/api/{SESSION}/status-session"
+        headers = get_headers()
+        
+        if not headers:
+            return {"state": "DISCONNECTED", "message": "Sem token"}
+
         resp = requests.get(url, headers=headers, timeout=5)
+        
         if resp.status_code == 200:
-            return resp.json()
-        return {"instance": INSTANCE, "state": "DISCONNECTED"}
+            data = resp.json()
+            status = data.get('status', 'DISCONNECTED')
+            # Mapeia status do WPPConnect para o nosso frontend
+            if status in ['CONNECTED', 'inChat', 'isLogged']:
+                return {"state": "open", "status": status}
+            if status in ['qrReadError', 'browserClose']:
+                return {"state": "close", "status": status}
+            return {"state": "connecting", "status": status}
+            
+        return {"state": "close", "details": "Sessão não iniciada"}
     except Exception as e:
-        print(f"Erro ao checar status: {e}")
         return {"state": "ERROR", "details": str(e)}
 
 @router.get("/management/qrcode")
 def get_qrcode():
-    """Gera o QR Code para conexão"""
+    """Inicia sessão e retorna QR Code"""
     try:
-        # 1. Tenta criar a instância (se não existir)
-        create_url = f"{EVOLUTION_URL}/instance/create"
-        create_payload = {
-            "instanceName": INSTANCE,
-            "qrcode": True,
-            "integration": "WHATSAPP-BAILEYS"
+        headers = get_headers()
+        if not headers:
+            raise HTTPException(status_code=500, detail="Falha na autenticação com WPPConnect")
+
+        # 1. Inicia Sessão (Start Session)
+        start_url = f"{BASE_URL}/api/{SESSION}/start-session"
+        # webhook é importante para receber mensagens
+        webhook_url = os.getenv("WEBHOOK_GLOBAL_URL", "")
+        payload = {
+            "webhook": webhook_url,
+            "waitQrCode": True
         }
-        requests.post(create_url, json=create_payload, headers=headers)
+        requests.post(start_url, json=payload, headers=headers, timeout=10)
         
-        # 2. Tenta conectar (gerar QR Code)
-        connect_url = f"{EVOLUTION_URL}/instance/connect/{INSTANCE}"
-        resp = requests.get(connect_url, headers=headers, timeout=10)
+        # 2. Pega o QR Code (que vem no status ou endpoint específico)
+        # O WPPConnect retorna o QR Code em base64 no status se estiver aguardando leitura
+        status_url = f"{BASE_URL}/api/{SESSION}/status-session"
+        resp = requests.get(status_url, headers=headers, timeout=10)
         
         if resp.status_code == 200:
-            return resp.json()
-            
-        # Se falhar (ex: já conectado ou erro), tenta verificar o status
-        status_url = f"{EVOLUTION_URL}/instance/connectionState/{INSTANCE}"
-        status_resp = requests.get(status_url, headers=headers)
-        
-        if status_resp.status_code == 200:
-            state = status_resp.json().get('instance', {}).get('state')
-            if state == 'open':
-                return {"status": "connected", "message": "WhatsApp já conectado"}
-        
-        # Se chegou aqui, tenta forçar logout e tentar de novo (recuperação)
-        requests.delete(f"{EVOLUTION_URL}/instance/logout/{INSTANCE}", headers=headers)
-        
-        # Tenta conectar novamente após logout
-        resp_retry = requests.get(connect_url, headers=headers, timeout=10)
-        if resp_retry.status_code == 200:
-            return resp_retry.json()
-
-        raise HTTPException(status_code=400, detail="Não foi possível gerar QR Code. Tente novamente em instantes.")
+            data = resp.json()
+            if data.get('qrcode'):
+                return {"base64": data.get('qrcode')}
+                
+        return {"message": "Aguardando geração do QR Code..."}
         
     except Exception as e:
-        print(f"Erro QR Code: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/management/logout")
+def logout():
+    """Fecha a sessão"""
+    try:
+        headers = get_headers()
+        url = f"{BASE_URL}/api/{SESSION}/close-session"
+        requests.post(url, headers=headers)
+        return {"status": "logged_out"}
+    except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/management/pairing-code")
 def get_pairing_code(request: PairingRequest):
-    """Gera código de pareamento para conexão sem QR Code"""
-    try:
-        # 1. LIMPEZA TOTAL: Deleta a instância para começar do zero
-        # Isso evita conflitos com QR Codes antigos ou estados travados
-        delete_url = f"{EVOLUTION_URL}/instance/delete/{INSTANCE}"
-        try:
-            requests.delete(delete_url, headers=headers, timeout=5)
-        except:
-            pass # Ignora erro se não existir
-
-        # 2. CRIAÇÃO: Cria nova instância SEM QR Code
-        create_url = f"{EVOLUTION_URL}/instance/create"
-        create_payload = {
-            "instanceName": INSTANCE,
-            "qrcode": False,  # False é essencial para Pairing Code
-            "integration": "WHATSAPP-BAILEYS"
-        }
-        create_resp = requests.post(create_url, json=create_payload, headers=headers, timeout=10)
-        
-        if create_resp.status_code not in [200, 201]:
-            raise HTTPException(status_code=400, detail=f"Erro ao criar instância: {create_resp.text}")
-
-        # 3. SOLICITAÇÃO: Pede o código
-        phone = "".join(filter(str.isdigit, request.number))
-        
-        # TENTATIVA 1: Endpoint padrão de conexão (GET com number na query)
-        connect_url = f"{EVOLUTION_URL}/instance/connect/{INSTANCE}"
-        resp = requests.get(connect_url, headers=headers, params={"number": phone}, timeout=20)
-        
-        if resp.status_code == 200:
-            data = resp.json()
-            if data.get('pairingCode'):
-                return data
-            if data.get('code'):
-                return {"pairingCode": data.get('code')}
-                
-        # TENTATIVA 2: Endpoint alternativo (POST com number no body)
-        pairing_url = f"{EVOLUTION_URL}/instance/pairingCode/{INSTANCE}"
-        resp2 = requests.post(pairing_url, headers=headers, json={"number": phone}, timeout=20)
-        
-        if resp2.status_code == 200:
-             return resp2.json()
-
-        # Se falhar, retorna o erro exato da API para debug
-        error_details = f"Tentativa 1: {resp.status_code} - {resp.text} | Tentativa 2: {resp2.status_code} - {resp2.text}"
-        print(f"Falha Pairing Code: {error_details}")
-        raise HTTPException(status_code=400, detail=f"Falha na API: {error_details}")
-        
-    except HTTPException as he:
-        raise he
-    except Exception as e:
-        print(f"Erro Interno Pairing Code: {e}")
-        raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
-
-@router.post("/management/logout")
-def logout():
-    """Desconecta o WhatsApp"""
-    try:
-        url = f"{EVOLUTION_URL}/instance/logout/{INSTANCE}"
-        requests.delete(url, headers=headers)
-        return {"status": "logged_out"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    """
+    WPPConnect Server ainda não tem suporte nativo robusto para Pairing Code via API pública
+    na versão stable. Mas vamos deixar preparado caso usem uma versão beta que suporte.
+    """
+    raise HTTPException(status_code=400, detail="WPPConnect ainda não suporta Código de Pareamento via API. Use o QR Code.")
+```

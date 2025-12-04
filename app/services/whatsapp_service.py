@@ -2,37 +2,6 @@ import os
 import requests
 from typing import Optional
 
-class WhatsAppService:
-    """
-    Serviço responsável pela integração com a API do WhatsApp (Evolution API / Waha).
-    """
-
-    def __init__(self):
-        # Lê a URL da API do arquivo .env. Se não existir, usa localhost como fallback seguro.
-        self.api_url = os.getenv("WHATSAPP_API_URL", "http://localhost:8080")
-        # API Key para autenticação na Evolution API
-        self.api_token = os.getenv("AUTHENTICATION_API_KEY", "")
-
-    def enviar_texto(self, numero: str, mensagem: str) -> dict:
-        """
-        Envia uma mensagem de texto para o número especificado.
-        
-        Args:
-            numero (str): Número do destinatário (ex: 5511999999999).
-            mensagem (str): Conteúdo da mensagem.
-            
-        Returns:
-            dict: Resposta da API ou dicionário de mock em caso de erro.
-        """
-        # Nome da instância configurada no Evolution API
-        instance_name = "chatbot"
-        endpoint = f"{self.api_url}/message/sendText/{instance_name}"
-        
-        # Payload compatível com Evolution API
-        payload = {
-            "number": numero,
-            "textMessage": {
-                "text": mensagem
             }
         }
         
