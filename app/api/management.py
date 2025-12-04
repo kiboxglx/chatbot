@@ -15,20 +15,30 @@ SESSION = "chatbot"
 
 def get_token():
     """Gera token para operações administrativas"""
+    url = f"{BASE_URL}/api/{SESSION}/{SECRET_KEY}/generate-token"
     try:
-        url = f"{BASE_URL}/api/{SESSION}/{SECRET_KEY}/generate-token"
-        resp = requests.post(url, json={"secret": SECRET_KEY}, timeout=5)
+        print(f"Tentando gerar token em: {url}")
+        resp = requests.post(url, json={"secret": SECRET_KEY}, timeout=10)
+        
         if resp.status_code == 200:
             data = resp.json()
             if 'token' in data: return data['token']
             if 'session' in data: return data['session']['token']
+            
+        # Se não for 200, retorna o erro
+        error_msg = f"WPPConnect retornou {resp.status_code}: {resp.text}"
+        print(error_msg)
+        raise Exception(error_msg)
+        
     except Exception as e:
-        print(f"Erro ao gerar token: {e}")
-    return None
+        print(f"Erro fatal ao conectar no WPPConnect: {e}")
+        # Retorna o erro original para aparecer no frontend
+        raise Exception(f"Falha de Conexão: {str(e)}")
 
 def get_headers():
+    # Agora get_token lança exceção se falhar, que será capturada pelo endpoint
     token = get_token()
-    return {"Authorization": f"Bearer {token}"} if token else {}
+    return {"Authorization": f"Bearer {token}"}
 
 @router.get("/management/status")
 def get_status():
