@@ -6,7 +6,7 @@ class WhatsAppService:
     def __init__(self):
         self.base_url = os.getenv("WHATSAPP_API_URL", "http://localhost:8080")
         self.api_key = os.getenv("AUTHENTICATION_API_KEY", "123Cartoon*") # Usado como SECRET_KEY no WPPConnect
-        self.session = "chatbot"
+        self.session = "bot_whatsapp"
         self.token = None
 
     def _get_token(self):
