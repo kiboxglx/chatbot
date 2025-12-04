@@ -43,9 +43,13 @@ export default function WhatsAppConnection() {
             if (res.data.base64) {
                 setQrCode(res.data.base64);
                 setStatus('connecting');
+            } else if (res.data.code) {
+                setQrCode(res.data.code);
+                setStatus('connecting');
             }
-        } catch (error) {
-            alert("Erro ao gerar QR Code. Verifique se a API está online.");
+        } catch (error: any) {
+            console.error("Erro detalhado:", error.response?.data || error.message);
+            alert(`Erro ao gerar QR Code: ${error.response?.data?.detail || error.message}`);
         } finally {
             setLoading(false);
         }
