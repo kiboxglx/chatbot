@@ -79,16 +79,31 @@ def get_qrcode():
 def get_pairing_code(request: PairingRequest):
     """Gera código de pareamento para conexão sem QR Code"""
     try:
-        # 1. Garante que a instância existe
-        # Para pairing code, qrcode deve ser false em algumas versões, ou true em outras.
-        # Vamos tentar recriar garantindo qrcode=true (padrão)
+        # 1. Para Pairing Code funcionar, a instância NÃO pode ter QR Code ativo
+        # Vamos tentar deletar e recriar a instância sem QR Code
+        # Isso é drástico, mas necessário se ela estiver presa no modo QR Code
+        
+        # Verifica status primeiro
+        status_url = f"{EVOLUTION_URL}/instance/connectionState/{INSTANCE}"
+        try:
+            status_resp = requests.get(status_url, headers=headers, timeout=5)
+            if status_resp.status_code == 200:
+                state = status_resp.json().get('instance', {}).get('state')
+                if state == 'open':
+                    return {"status": "connected", "message": "WhatsApp já conectado"}
+        except:
+            pass
+
+        # Recria instância SEM QR Code (qrcode: False)
+        # Isso é crucial para o Pairing Code funcionar em algumas versões
         create_url = f"{EVOLUTION_URL}/instance/create"
         create_payload = {
             "instanceName": INSTANCE,
-            "qrcode": True,
+            "qrcode": False,  # IMPORTANTE: False para permitir Pairing Code
             "integration": "WHATSAPP-BAILEYS"
         }
-        # Ignora erro se já existir
+        
+        # Tenta criar (se já existir, pode dar erro, mas seguimos)
         requests.post(create_url, json=create_payload, headers=headers)
         
         # 2. Solicita o código de pareamento
@@ -100,20 +115,20 @@ def get_pairing_code(request: PairingRequest):
         
         if resp.status_code == 200:
             data = resp.json()
+            # Verifica se veio o pairingCode
             if data.get('pairingCode'):
                 return data
-            if data.get('code'): # Algumas versões retornam como 'code'
+            if data.get('code') and len(data.get('code')) < 20: # Garante que é curto
                 return {"pairingCode": data.get('code')}
                 
-        # TENTATIVA 2: Se falhar, tenta endpoint específico de algumas versões
-        # GET /instance/pairingCode/{instance}?number=...
+        # TENTATIVA 2: POST /instance/pairingCode/{instance}
         pairing_url = f"{EVOLUTION_URL}/instance/pairingCode/{INSTANCE}"
-        resp2 = requests.get(pairing_url, headers=headers, params={"number": phone}, timeout=20)
+        resp2 = requests.post(pairing_url, headers=headers, json={"number": phone}, timeout=20)
         
         if resp2.status_code == 200:
              return resp2.json()
 
-        raise HTTPException(status_code=400, detail=f"Erro ao gerar código. Resposta: {resp.text}")
+        raise HTTPException(status_code=400, detail=f"Erro ao gerar código. Verifique se o número está correto.")
         
     except Exception as e:
         print(f"Erro Pairing Code: {e}")
