@@ -1,7 +1,6 @@
 from app.core.database import engine, Base
 # Importar todos os modelos para que o SQLAlchemy os reconheça
 from app.models.cliente import Cliente
-from app.models.configuracao import Configuracao
 
 def init_db():
     print("Criando tabelas no banco de dados...")
