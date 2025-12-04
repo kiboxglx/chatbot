@@ -1,79 +1,61 @@
-import os
-import json
-from datetime import datetime, timedelta
-    message_content = data.get('message', {})
-    mensagem = ""
-    media_path = None
-    
-    if 'conversation' in message_content:
-        mensagem = message_content['conversation']
-    elif 'extendedTextMessage' in message_content:
-        mensagem = message_content['extendedTextMessage'].get('text', '')
-    elif 'imageMessage' in message_content:
-        mensagem = message_content['imageMessage'].get('caption', 'Imagem enviada')
-        print("📷 Imagem detectada! Baixando...")
-        media_path = media_service.download_media(message_content['imageMessage'])
-    elif 'documentMessage' in message_content:
-        mensagem = message_content['documentMessage'].get('caption', 'Documento enviado')
-        print("📄 Documento detectado! Baixando...")
-        media_path = media_service.download_media(message_content['documentMessage'])
-    
-    if not mensagem and not media_path:
-        return {"status": "ignored", "reason": "empty_message"}
+from fastapi import APIRouter, Request
+from app.services.ai_service import BrainService
+from app.services.whatsapp_service import WhatsAppService
 
-    print(f"📩 Cliente: {telefone} | Msg: {mensagem}")
+router = APIRouter()
+brain_service = BrainService()
+whatsapp_service = WhatsAppService()
 
-    # --- VERIFICAÇÃO DE HORÁRIO (Apenas Informativo - IA decide o que dizer) ---
-    # A lógica de bloqueio foi removida a pedido.
-    # A IA será instruída via prompt a avisar sobre o horário se necessário.
-
-    # 3. Identificação do Cliente (Opcional - agora permite não cadastrados)
-    nome_cliente = "Cliente"
-    contexto_extra = ""
-    
+@router.post("/webhook")
+async def webhook(request: Request):
+    """
+    Webhook para receber mensagens do WPPConnect Server
+    """
     try:
-        cliente = db.query(Cliente).filter(Cliente.telefone == telefone).first()
-        if cliente:
-            nome_cliente = cliente.nome
-            contexto_extra = f"Empresa: {cliente.empresa_nome} | CNPJ: {cliente.cnpj_cpf}"
-            print(f"Cliente identificado: {cliente.nome}")
-        else:
-            print(f"Número não cadastrado: {telefone}. Atendendo como visitante.")
-    except Exception as e:
-        print(f"Erro ao buscar cliente (banco offline?): {e}")
-
-    # 4. Processamento IA (Cérebro)
-    agora_str = datetime.now().strftime("%d/%m/%Y %H:%M")
-    contexto = f"Cliente: {nome_cliente} | {contexto_extra} | Data/Hora Atual: {agora_str}"
-    
-    # Envia para o Gemini
-    decisao_ia = brain_service.processar_mensagem(mensagem, contexto, media_path)
-    
-    # Limpa arquivo temporário
-    if media_path and os.path.exists(media_path):
-        try:
-            os.remove(media_path)
-        except:
-            pass
-    
-    acao = decisao_ia.get("action")
-    texto_resposta = decisao_ia.get("response_text")
-    
-    print(f"🤖 IA: {acao} | Resp: {texto_resposta}")
-
-    # 5. Executar Ação
-    if acao in ['REPLY', 'HANDOFF', 'SEND_DOC']:
-        # Envia a resposta
-        whatsapp_service.enviar_texto(telefone, texto_resposta)
+        data = await request.json()
         
-        # Se for HANDOFF, podemos pausar o bot automaticamente também?
-        # Opcional: Se a IA decidiu passar para humano, pausa o bot para não atrapalhar
-        if acao == 'HANDOFF':
-            print(f"🛑 IA solicitou humano. Pausando bot para {telefone}.")
-            PAUSED_CHATS[telefone] = datetime.now()
+        # WPPConnect: Verifica evento
+        # O evento principal de mensagem é 'onMessage'
+        if data.get("event") != "onMessage":
+            return {"status": "ignored", "reason": "Not a message event"}
 
-    return {
-        "status": "processed",
-        "client": nome_cliente,
-        "ai_action": acao
-    }
+        message_data = data.get("data", {})
+        
+        # Ignora mensagens enviadas por mim mesmo (fromMe) e mensagens de grupo (isGroup)
+        if message_data.get("fromMe", False) or message_data.get("isGroup", False):
+            return {"status": "ignored"}
+
+        # Extrai dados principais
+        # WPPConnect usa 'from' para o remetente (ex: 5511999999999@c.us)
+        remote_jid = message_data.get("from", "")
+        # Remove o sufixo @c.us para ficar só o número limpo
+        numero_cliente = remote_jid.replace("@c.us", "")
+        
+        body = message_data.get("body", "") or message_data.get("content", "")
+        
+        if not body:
+            return {"status": "ignored", "reason": "Empty body"}
+
+        print(f"📩 Mensagem recebida de {numero_cliente}: {body}")
+
+        # --- LÓGICA DO BOT ---
+        
+        # 1. Processar com IA (BrainService)
+        contexto = f"Cliente WhatsApp: {numero_cliente}"
+        
+        # O método processar_mensagem retorna um dict com 'response_text' e 'action'
+        decisao = brain_service.processar_mensagem(body, contexto)
+        
+        resposta_texto = decisao.get("response_text", "")
+        acao = decisao.get("action", "REPLY")
+
+        # 2. Envia a resposta via WPPConnect
+        if resposta_texto:
+            whatsapp_service.enviar_texto(numero_cliente, resposta_texto)
+
+        return {"status": "processed", "action": acao}
+
+    except Exception as e:
+        print(f"❌ Erro no webhook: {e}")
+        # Retorna 200 mesmo com erro para o WPPConnect não ficar tentando reenviar infinitamente
+        return {"status": "error", "details": str(e)}
