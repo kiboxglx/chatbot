@@ -3,7 +3,7 @@ import axios from 'axios';
 import { QrCode, RefreshCw, Power, Smartphone, CheckCircle2 } from 'lucide-react';
 
 // Use a URL do seu backend no Railway (que você mostrou na imagem)
-const API_URL = import.meta.env.VITE_API_URL || 'https://chatbot-production-e324.up.railway.app';
+const API_URL = 'https://chatbot-production-e324.up.railway.app';
 
 export default function WhatsAppConnection() {
     const [status, setStatus] = useState<'open' | 'close' | 'connecting'>('close');

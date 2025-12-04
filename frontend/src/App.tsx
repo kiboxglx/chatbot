@@ -21,7 +21,7 @@ import WhatsAppConnection from './components/WhatsAppConnection';
 
 // Configuração da API
 // Em produção, usa a URL do Railway se a variável de ambiente não estiver definida
-const API_URL = import.meta.env.VITE_API_URL || 'https://chatbot-production-e324.up.railway.app';
+const API_URL = 'https://chatbot-production-e324.up.railway.app';
 
 interface Client {
     id: number;
