@@ -6,8 +6,15 @@ import os
 load_dotenv()
 
 from app.api import webhook, clients, settings, error_handler, management
+from app.core.database import init_db
 
 app = FastAPI(title="Chatbot Contábil", version="0.1.0")
+
+@app.on_event("startup")
+async def startup_event():
+    print("🚀 Chatbot Iniciando... Verificando Banco de Dados...")
+    init_db()
+    print("✅ Banco de Dados OK!")
 
 # Configuração de CORS
 app.add_middleware(
