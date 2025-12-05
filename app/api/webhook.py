@@ -18,7 +18,7 @@ def process_message_background(numero_cliente: str, body: str):
         resposta_texto = decisao.get("response_text", "")
         acao = decisao.get("action", "REPLY")
 
-        # 2. Envia a resposta via WPPConnect
+        # 2. Envia a resposta via WAHA
         if resposta_texto:
             print(f"📤 Enviando resposta para {numero_cliente}...")
             whatsapp_service.enviar_texto(numero_cliente, resposta_texto)
@@ -30,26 +30,28 @@ def process_message_background(numero_cliente: str, body: str):
 @router.post("/webhook")
 async def webhook(request: Request, background_tasks: BackgroundTasks):
     """
-    Webhook para receber mensagens do WPPConnect Server
+    Webhook para receber mensagens do WAHA
     """
     try:
         data = await request.json()
         
-        # WPPConnect: Verifica evento
-        if data.get("event") != "onMessage":
+        # WAHA: Verifica evento (pode ser 'message', 'message.any', etc)
+        event = data.get("event")
+        if event not in ["message", "message.any"]:
             return {"status": "ignored", "reason": "Not a message event"}
 
-        message_data = data.get("data", {})
+        # Extrai dados da mensagem
+        payload = data.get("payload", {})
         
-        # Ignora mensagens enviadas por mim mesmo (fromMe) e mensagens de grupo (isGroup)
-        if message_data.get("fromMe", False) or message_data.get("isGroup", False):
+        # Ignora mensagens enviadas por mim mesmo (fromMe)
+        if payload.get("fromMe", False):
             return {"status": "ignored"}
 
-        # Extrai dados principais
-        remote_jid = message_data.get("from", "")
-        numero_cliente = remote_jid.replace("@c.us", "")
+        # Extrai o remetente (from) e o corpo da mensagem
+        from_data = payload.get("from", "")
+        numero_cliente = from_data.replace("@c.us", "")
         
-        body = message_data.get("body", "") or message_data.get("content", "")
+        body = payload.get("body", "")
         
         if not body:
             return {"status": "ignored", "reason": "Empty body"}
@@ -57,8 +59,6 @@ async def webhook(request: Request, background_tasks: BackgroundTasks):
         print(f"📩 Mensagem recebida de {numero_cliente}: {body}")
 
         # --- LÓGICA DO BOT (BACKGROUND) ---
-        # Adiciona o processamento na fila de background do FastAPI
-        # Isso retorna 200 OK imediatamente para o WPPConnect
         background_tasks.add_task(process_message_background, numero_cliente, body)
 
         return {"status": "queued", "message": "Processing in background"}
