@@ -127,6 +127,45 @@ def logout():
 @router.post("/management/pairing-code")
 def get_pairing_code(request: PairingRequest):
     """
-    WAHA não suporta Pairing Code nativamente
+    Gera código de pareamento no WAHA
     """
-    raise HTTPException(status_code=400, detail="WAHA não suporta Código de Pareamento. Use o QR Code.")
+    try:
+        headers = get_headers()
+        
+        # 1. Garante que a sessão está iniciada (semelhante ao QR Code)
+        # Mas para pairing code, a sessão precisa estar em SCAN_QR_CODE
+        status_url = f"{BASE_URL}/api/sessions/{SESSION}"
+        status_resp = requests.get(status_url, headers=headers, timeout=10)
+        
+        if status_resp.status_code == 200:
+            status = status_resp.json().get('status')
+            if status == 'STOPPED':
+                # Inicia a sessão se estiver parada
+                start_url = f"{BASE_URL}/api/sessions/start"
+                webhook_url = os.getenv("WEBHOOK_GLOBAL_URL", "https://chatbot-production-e324.up.railway.app/webhook")
+                payload = {
+                    "name": SESSION,
+                    "config": {"webhooks": [{"url": webhook_url, "events": ["message"]}]}
+                }
+                requests.post(start_url, json=payload, headers=headers, timeout=30)
+                import time
+                time.sleep(3) # Aguarda iniciar
+        
+        # 2. Solicita o código
+        url = f"{BASE_URL}/api/{SESSION}/auth/request-code"
+        payload = {"phoneNumber": request.number.replace("+", "").replace("-", "").strip()}
+        
+        print(f"Solicitando Pairing Code para: {payload['phoneNumber']}")
+        resp = requests.post(url, json=payload, headers=headers, timeout=20)
+        
+        if resp.status_code in [200, 201]:
+            data = resp.json()
+            # WAHA retorna {"code": "XYZ-123"}
+            # Frontend espera {"pairingCode": "XYZ-123"}
+            return {"pairingCode": data.get("code")}
+            
+        raise HTTPException(status_code=resp.status_code, detail=f"Erro WAHA: {resp.text}")
+        
+    except Exception as e:
+        print(f"Erro Pairing Code: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
