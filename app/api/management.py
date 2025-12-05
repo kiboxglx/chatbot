@@ -64,10 +64,8 @@ def get_qrcode():
             
             print(f"Status atual da sessão: {current_status}")
             
-            # Se já está rodando e esperando QR, pega direto
-            if current_status in ['SCAN_QR_CODE', 'STARTING']:
-                print("Sessão já está aguardando QR Code...")
-            elif current_status == 'WORKING':
+            # Se já está conectado, retorna mensagem
+            if current_status == 'WORKING':
                 return {"message": "Sessão já está conectada!"}
 
         # 2. Se não existe ou está parada, inicia
@@ -96,19 +94,21 @@ def get_qrcode():
         import time
         time.sleep(3)
         
-        # 4. Pega o QR Code
+        # 4. Pega o QR Code - WAHA retorna a imagem PNG diretamente
         qr_url = f"{BASE_URL}/api/{SESSION}/auth/qr"
         qr_resp = requests.get(qr_url, headers=headers, timeout=10)
         
         if qr_resp.status_code == 200:
-            data = qr_resp.json()
-            # WAHA retorna {qr: "base64..."}
-            if data.get('qr'):
-                return {"base64": data.get('qr')}
+            # WAHA retorna a imagem PNG, precisamos converter para base64
+            import base64
+            qr_base64 = base64.b64encode(qr_resp.content).decode('utf-8')
+            return {"base64": f"data:image/png;base64,{qr_base64}"}
                 
         return {"message": "Aguardando geração do QR Code..."}
         
     except Exception as e:
+        import traceback
+        print(f"Erro completo: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/management/logout")
