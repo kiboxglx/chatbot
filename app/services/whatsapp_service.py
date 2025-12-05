@@ -20,7 +20,7 @@ class WhatsAppService:
             
             # WPPConnect às vezes precisa iniciar a sessão antes de gerar token
             # Mas vamos tentar gerar direto. Se falhar, o management.py cuida do start.
-            response = requests.post(url, json=payload, timeout=10)
+            response = requests.post(url, json=payload, timeout=60)
             
             if response.status_code in [200, 201]:
                 data = response.json()
@@ -68,7 +68,7 @@ class WhatsAppService:
                 print("Falha: Sem token de autenticação")
                 return {"error": "No auth token"}
 
-            response = requests.post(url, json=payload, headers=headers, timeout=20)
+            response = requests.post(url, json=payload, headers=headers, timeout=120)
             return response.json()
         except Exception as e:
             print(f"Erro ao enviar mensagem (WPPConnect): {e}")
