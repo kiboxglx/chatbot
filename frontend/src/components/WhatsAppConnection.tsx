@@ -71,7 +71,8 @@ export default function WhatsAppConnection() {
         setLoading(true);
         setPairingCode(null);
         try {
-            const res = await axios.post(`${API_URL}/management/pairing-code`, { number: phoneNumber });
+            // Aumenta timeout do frontend para 130s (2m10s)
+            const res = await axios.post(`${API_URL}/management/pairing-code`, { number: phoneNumber }, { timeout: 130000 });
             if (res.data.pairingCode) {
                 setPairingCode(res.data.pairingCode);
                 setStatus('connecting');

@@ -156,7 +156,8 @@ def get_pairing_code(request: PairingRequest):
         payload = {"phoneNumber": request.number.replace("+", "").replace("-", "").strip()}
         
         print(f"Solicitando Pairing Code para: {payload['phoneNumber']}")
-        resp = requests.post(url, json=payload, headers=headers, timeout=20)
+        # Aumentando timeout para 120s (2 min)
+        resp = requests.post(url, json=payload, headers=headers, timeout=120)
         
         if resp.status_code in [200, 201]:
             data = resp.json()
