@@ -22,7 +22,7 @@ class WhatsAppService:
             # Mas vamos tentar gerar direto. Se falhar, o management.py cuida do start.
             response = requests.post(url, json=payload, timeout=10)
             
-            if response.status_code == 200:
+            if response.status_code in [200, 201]:
                 data = response.json()
                 if 'token' in data:
                     self.token = data['token']
@@ -30,6 +30,10 @@ class WhatsAppService:
                 if 'session' in data and 'token' in data['session']: # Estrutura varia
                     self.token = data['session']['token']
                     return self.token
+                # Caso o token venha solto no 'response' ou 'full' (como visto nos logs)
+                if 'response' in data and 'token' in data['response']:
+                     self.token = data['response']['token']
+                     return self.token
             
             print(f"Erro ao gerar token WPPConnect: {response.text}")
             return None
