@@ -52,20 +52,51 @@ def get_qrcode():
     try:
         headers = get_headers()
 
-        # 1. Inicia a sessão
-        start_url = f"{BASE_URL}/api/sessions/start"
-        payload = {"name": SESSION}
+        # 1. Verifica se a sessão já existe
+        status_url = f"{BASE_URL}/api/sessions/{SESSION}"
+        status_resp = requests.get(status_url, headers=headers, timeout=10)
         
-        resp = requests.post(start_url, json=payload, headers=headers, timeout=30)
-        
-        if resp.status_code not in [200, 201]:
-            raise HTTPException(status_code=500, detail=f"Erro ao iniciar sessão: {resp.text}")
+        session_exists = False
+        if status_resp.status_code == 200:
+            session_data = status_resp.json()
+            current_status = session_data.get('status', 'STOPPED')
+            session_exists = current_status != 'STOPPED'
+            
+            print(f"Status atual da sessão: {current_status}")
+            
+            # Se já está rodando e esperando QR, pega direto
+            if current_status in ['SCAN_QR_CODE', 'STARTING']:
+                print("Sessão já está aguardando QR Code...")
+            elif current_status == 'WORKING':
+                return {"message": "Sessão já está conectada!"}
 
-        # 2. Aguarda um pouco para o QR Code ser gerado
+        # 2. Se não existe ou está parada, inicia
+        if not session_exists:
+            start_url = f"{BASE_URL}/api/sessions/start"
+            webhook_url = os.getenv("WEBHOOK_GLOBAL_URL", "https://chatbot-production-e324.up.railway.app/webhook")
+            
+            payload = {
+                "name": SESSION,
+                "config": {
+                    "webhooks": [
+                        {
+                            "url": webhook_url,
+                            "events": ["message"],
+                        }
+                    ]
+                }
+            }
+            
+            resp = requests.post(start_url, json=payload, headers=headers, timeout=30)
+            
+            if resp.status_code not in [200, 201]:
+                raise HTTPException(status_code=500, detail=f"Erro ao iniciar sessão: {resp.text}")
+
+        # 3. Aguarda um pouco para o QR Code ser gerado
         import time
-        time.sleep(2)
+        time.sleep(3)
         
-        # 3. Pega o QR Code
+        # 4. Pega o QR Code
         qr_url = f"{BASE_URL}/api/{SESSION}/auth/qr"
         qr_resp = requests.get(qr_url, headers=headers, timeout=10)
         
