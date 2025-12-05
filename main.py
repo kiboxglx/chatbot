@@ -6,7 +6,7 @@ import os
 load_dotenv()
 
 from app.api import webhook, clients, settings, error_handler, management
-from app.core.database import init_db
+from app.core.init_db import init_db
 
 app = FastAPI(title="Chatbot Contábil", version="0.1.0")
 
