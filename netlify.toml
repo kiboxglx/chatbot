@@ -10,7 +10,7 @@
   status = 200
   force = true
 
-# Redirecionamento para SPA (React)
+# Redirecionamento para SPA (React) - IMPORTANTE
 [[redirects]]
   from = "/*"
   to = "/index.html"

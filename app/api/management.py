@@ -113,13 +113,18 @@ def get_qrcode():
 
 @router.post("/management/logout")
 def logout():
-    """Fecha a sessão"""
+    """Fecha a sessão e limpa dados (Logout completo)"""
     try:
         headers = get_headers()
-        url = f"{BASE_URL}/api/sessions/stop"
-        payload = {"name": SESSION}
+        # Usamos DELETE para remover a sessão completamente, permitindo
+        # conectar um novo número limpo na próxima vez.
+        url = f"{BASE_URL}/api/sessions/{SESSION}"
         
-        requests.post(url, json=payload, headers=headers, timeout=10)
+        resp = requests.delete(url, headers=headers, timeout=20)
+        
+        if resp.status_code not in [200, 201, 404]:
+             print(f"Erro ao deletar sessão: {resp.text}")
+             
         return {"status": "logged_out"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
