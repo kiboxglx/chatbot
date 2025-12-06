@@ -15,12 +15,6 @@ class WhatsAppService:
             "Content-Type": "application/json"
         }
 
-        except Exception as e:
-            print(f"❌ Erro CRÍTICO ao enviar mensagem (WAHA): {e}")
-            import traceback
-            traceback.print_exc()
-            return {"error": str(e)}
-
     def enviar_texto(self, numero: str, mensagem: str):
         try:
             # WAHA usa chatId no formato: 5511999999999@c.us
