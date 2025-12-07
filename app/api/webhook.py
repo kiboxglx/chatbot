@@ -52,9 +52,10 @@ async def webhook(request: Request, background_tasks: BackgroundTasks):
         if not event:
             return {"status": "ignored", "reason": "No event field"}
 
-        # Ignorar eventos que não sejam mensagens
-        if event not in ["message", "message.any", "message.create"]:
-            return {"status": "ignored", "reason": f"Event {event} ignored"}
+        # WAHA envia 'message' e 'message.any'. Se ouvirmos os dois, processamos duplicado.
+        # Vamos restringir apenas para 'message' que é o evento principal.
+        if event != "message":
+            return {"status": "ignored", "reason": f"Event {event} ignored (duplicate prevention)"}
 
         # Extrai payload
         payload = data.get("payload", {})
