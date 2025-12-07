@@ -8,9 +8,16 @@ class MediaService:
     def __init__(self):
         self.storage_dir = "storage/temp"
         os.makedirs(self.storage_dir, exist_ok=True)
-        # Headers para baixar da Evolution API se necessário (usando a mesma key)
-        self.api_key = os.getenv("WHATSAPP_API_TOKEN", "")
-        self.headers = {"apikey": self.api_key}
+import os
+import base64
+import requests
+import mimetypes
+from datetime import datetime
+
+class MediaService:
+    def __init__(self):
+        self.storage_dir = "storage/temp"
+        os.makedirs(self.storage_dir, exist_ok=True)
 
     def salvar_base64(self, base64_data: str, mime_type: str) -> str:
         """Salva uma string base64 como arquivo."""
@@ -23,39 +30,25 @@ class MediaService:
             
         return filepath
 
-    def download_media(self, message_data: dict) -> str:
+    def processar_midia(self, mensagem_data: dict) -> str:
         """
-        Tenta baixar a mídia da mensagem.
-        Suporta Base64 direto no payload ou URL de download.
+        Processa mídia recebida (Áudio ou Imagem) e converte para texto se possível.
+        WAHA envia mídia via URL ou Base64.
         """
-        try:
-            # 1. Tenta pegar Base64 direto (se habilitado no webhook)
-            media_data = message_data.get('base64')
-            if media_data:
-                # O Evolution manda algo como "data:image/jpeg;base64,..."
-                if "," in media_data:
-                    header, base64_str = media_data.split(",", 1)
-                    mime_type = header.split(":")[1].split(";")[0]
-                else:
-                    base64_str = media_data
-                    mime_type = message_data.get('mimetype', 'application/octet-stream')
-                
-                return self.salvar_base64(base64_str, mime_type)
+        tipo_mensagem = mensagem_data.get("type")
+        
+        # 1. Tenta pegar URL da mídia (Padrão WAHA)
+        media_url = mensagem_data.get("mediaUrl") or mensagem_data.get("body")
+        
+        # 2. Se não for URL válida, ignora processamento pesado por enquanto
+        if not media_url or not media_url.startswith("http"):
+            return f"[Mídia do tipo {tipo_mensagem} recebida]"
 
-            # 2. Se não tiver base64, tenta URL (Evolution v2 ou v1 configurado)
-            # A estrutura varia, vamos tentar achar uma URL
-            # Em mensagens de mídia, geralmente tem 'url' ou 'directPath' mas o download real
-            # na Evolution v1 costuma ser via endpoint específico se não vier o base64.
-            
-            # NOTA: Se o webhook não estiver mandando base64, precisamos buscar o base64
-            # usando o ID da mensagem. Vamos assumir que vamos configurar o webhook para mandar base64
-            # ou que vamos implementar a busca depois.
-            
-            # Por enquanto, vamos retornar None se não tiver base64, 
-            # e instruir o usuário a ativar "Webhook Base64" na Evolution se falhar.
-            print("AVISO: Nenhum base64 encontrado na mensagem. Ative 'Webhook Base64' na Evolution API.")
-            return None
+        try:
+            # TODO: Implementar download real da mídia se necessário
+            # Por enquanto retornamos apenas um marker identificando o tipo
+            return f"[Áudio recebido - Transcrição pendente]" if tipo_mensagem == "audio" else f"[Imagem recebida]"
 
         except Exception as e:
-            print(f"Erro ao baixar mídia: {e}")
-            return None
+            print(f"❌ Erro ao processar mídia: {e}")
+            return "[Erro ao processar mídia]"
