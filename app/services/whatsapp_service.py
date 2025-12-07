@@ -17,42 +17,46 @@ class WhatsAppService:
 
     def enviar_texto(self, numero: str, mensagem: str):
         try:
-            # WAHA usa chatId no formato: 5511999999999@c.us
-            if "@" not in numero:
-                numero = f"{numero}@c.us"
+            # WAHA Exige chatId no formato number@c.us
+            # Garantir que é string e limpar caracteres estranhos
+            numero = str(numero).strip()
+            
+            if "@c.us" not in numero:
+                # Se vier só o número, adiciona o sufixo
+                chat_id = f"{numero}@c.us"
+            else:
+                chat_id = numero
 
             url = f"{self.base_url}/api/sendText"
             
-            # --- LOG DE DIAGNÓSTICO ---
-            print(f"🚀 TENTATIVA DE ENVIO DE MENSAGEM:")
-            print(f"   URL: {url}")
-            print(f"   Destino: {numero}")
-            print(f"   Key Configurada: {self.api_key[:3]}***{self.api_key[-3:]}")
-            # --------------------------
+            # --- LOG AVANÇADO ---
+            print(f"👉 [Outbound] Enviando para: {chat_id}")
+            # --------------------
 
             payload = {
                 "session": self.session,
-                "chatId": numero,
+                "chatId": chat_id,
                 "text": mensagem
             }
             
             headers = self._get_headers()
             
-            print(f"   Enviando request...")
-            response = requests.post(url, json=payload, headers=headers, timeout=120)
+            response = requests.post(url, json=payload, headers=headers, timeout=60)
             
-            print(f"   ⬅️ Resposta WAHA: Status {response.status_code}")
-            print(f"   📄 Body: {response.text}")
-
             if response.status_code == 201:
-                print(f"✅ Mensagem enviada com sucesso para {numero}")
+                print(f"✅ [Outbound] Sucesso: {response.json().get('id', 'SEM_ID')}")
                 return response.json()
             else:
-                print(f"❌ WAHA rejeitou o envio: {response.status_code} - {response.text}")
+                print(f"❌ [Outbound] Erro WAHA ({response.status_code}): {response.text}")
                 return {"error": response.text}
                 
+        except requests.exceptions.Timeout:
+            print("❌ [Outbound] Timeout ao conectar com WAHA")
+            return {"error": "timeout"}
         except Exception as e:
-            print(f"❌ Erro ao enviar mensagem (WAHA Exception): {e}")
+            print(f"❌ [Outbound] Exception: {e}")
+            import traceback
+            traceback.print_exc()
             return {"error": str(e)}
 
     def enviar_arquivo(self, numero: str, caminho_arquivo: str, legenda: str = ""):
