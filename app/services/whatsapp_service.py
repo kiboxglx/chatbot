@@ -18,10 +18,20 @@ class WhatsAppService:
     def enviar_texto(self, numero: str, mensagem: str):
         try:
             # WAHA Exige chatId no formato number@c.us
-            # Garantir que é string e limpar caracteres estranhos
-            # Limpa o número de sufixos duplicados (@c.us@c.us)
-            numero = str(numero).strip().replace("@c.us", "")
-            chat_id = f"{numero}@c.us"
+            # Tratamento robusto de JID para evitar duplicação de sufixos
+            numero = str(numero).strip()
+            
+            if "@g.us" in numero:
+                 # Mantém grupos inalterados
+                 chat_id = numero
+            else:
+                 # Para usuários (seja @c.us, @lid ou sem sufixo), forçamos @c.us limpo
+                 if "@" in numero:
+                     base_number = numero.split("@")[0]
+                 else:
+                     base_number = numero
+                 
+                 chat_id = f"{base_number}@c.us"
 
             url = f"{self.base_url}/api/sendText"
             
