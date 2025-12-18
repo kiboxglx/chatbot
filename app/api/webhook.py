@@ -49,16 +49,20 @@ def clean_cache():
 def process_message_background(numero_cliente: str, body: str, media_url: str = None):
     """Processa a mensagem em background para não travar o webhook"""
     try:
-        print(f"🔄 [Background] Processando mensagem de {numero_cliente}...")
+        RECENT_EVENTS.append({"time": time.strftime("%H:%M:%S"), "event": "BG_START", "for": numero_cliente})
         
         # Carrega serviços sob demanda
         brain_service = get_brain()
         whatsapp_service = get_whatsapp()
         expense_service = get_expense()
 
+        RECENT_EVENTS.append({"time": time.strftime("%H:%M:%S"), "event": "BG_SERVICES_LOADED"})
+
         # 1. Processar com IA (BrainService)
         contexto = f"Cliente WhatsApp: {numero_cliente}"
         decisao = brain_service.processar_mensagem(body, contexto)
+        
+        RECENT_EVENTS.append({"time": time.strftime("%H:%M:%S"), "event": "BG_AI_DECISION", "action": decisao.get("action")})
         
         resposta_texto = decisao.get("response_text", "")
         acao = decisao.get("action", "REPLY")
@@ -91,6 +95,7 @@ def process_message_background(numero_cliente: str, body: str, media_url: str = 
             print("⚠️ A IA não gerou resposta de texto.")
             
     except Exception as e:
+        RECENT_EVENTS.append({"time": time.strftime("%H:%M:%S"), "event": "BG_ERROR", "error": str(e)})
         print(f"❌ Erro no processamento background: {e}")
         import traceback
         traceback.print_exc()
