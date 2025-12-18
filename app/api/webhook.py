@@ -32,10 +32,27 @@ def process_message_background(numero_cliente: str, body: str, media_url: str = 
         
         resposta_texto = decisao.get("response_text", "")
         acao = decisao.get("action", "REPLY")
+        params = decisao.get("parameters", {})
 
         print(f"🧠 Decisão da IA: {acao}")
 
-        # 2. Envia a resposta via WAHA
+        # 2. Executar Ações Específicas
+        if acao == "SAVE_EXPENSE":
+            amount = params.get("amount", 0)
+            desc = params.get("description", "Gasto não especificado")
+            cat = params.get("category", "Geral")
+            expense_service.save_expense(desc, float(amount), cat, numero_cliente)
+            print(f"💰 Gasto salvo: {desc} - R$ {amount}")
+
+        elif acao == "GENERATE_REPORT":
+            summary = expense_service.get_summary(numero_cliente)
+            total = summary["total"]
+            count = summary["count"]
+            # Personaliza a resposta da IA com o dado real se necessário
+            if "total" not in resposta_texto.lower():
+                resposta_texto += f"\n\n📊 *Resumo Atual:*\nTotal: R$ {total:.2f}\nRegistros: {count}"
+
+        # 3. Envia a resposta via WAHA
         if resposta_texto:
             print(f"📤 Enviando resposta para {numero_cliente}...")
             whatsapp_service.enviar_texto(numero_cliente, resposta_texto)

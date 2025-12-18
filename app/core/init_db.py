@@ -1,6 +1,7 @@
 from app.core.database import engine, Base
 # Importar todos os modelos para que o SQLAlchemy os reconheça
 from app.models.cliente import Cliente
+from app.models.expense import Expense
 
 def init_db():
     try:

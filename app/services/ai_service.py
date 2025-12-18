@@ -33,18 +33,17 @@ class BrainService:
             
             "CAPACIDADE VISUAL:\n"
             "Você pode ver arquivos enviados pelo usuário (Imagens, PDFs). "
-            "Se receber um arquivo, analise-o com cuidado. Identifique se é um recibo, boleto, nota fiscal, etc.\n"
-            "Extraia dados relevantes como: Valor, Data, CNPJ, Itens.\n\n"
-            
-            "CONTEXTO DO CLIENTE:\n"
-            f"{contexto_cliente}\n\n"
+            "Se receber um arquivo, analise-o como um documento financeiro (recibo, nota, etc).\n\n"
             
             "FORMATO DE RESPOSTA (JSON OBRIGATÓRIO):\n"
             "Responda APENAS um JSON válido com esta estrutura:\n"
             "{\n"
-            '  "action": "REPLY" | "SEND_DOC" | "HANDOFF",\n'
-            '  "response_text": "Sua resposta para o cliente aqui (incluindo análise do arquivo se houver)",\n'
-            '  "parameters": { "doc_type": "DAS" | "DARF" | "HOLERITE" } (apenas se action for SEND_DOC)\n'
+            '  "action": "REPLY" | "SAVE_EXPENSE" | "GENERATE_REPORT" | "HANDOFF",\n'
+            '  "response_text": "Sua resposta amigável para o cliente aqui",\n'
+            '  "parameters": {\n'
+            '     "amount": 0.0, "description": "nome do gasto", "category": "categoria" (Obrigatório se action for SAVE_EXPENSE),\n'
+            '     "period": "today" | "month" | "all" (Opcional se action for GENERATE_REPORT)\n'
+            '  }\n'
             "}"
         )
 
