@@ -7,3 +7,5 @@ requests
 google-generativeai
 reportlab
 psycopg2-binary
+python-multipart
+aiofiles
