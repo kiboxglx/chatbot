@@ -79,7 +79,6 @@ def process_message_background(numero_cliente: str, body: str, media_url: str = 
             print(f"💰 Gasto salvo: {desc} - R$ {amount}")
 
         elif acao == "GENERATE_REPORT":
-        elif acao == "GENERATE_REPORT":
             data = expense_service.get_summary(numero_cliente)
             
             # Cabeçalho Técnico
