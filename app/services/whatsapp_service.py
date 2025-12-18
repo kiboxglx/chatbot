@@ -19,13 +19,9 @@ class WhatsAppService:
         try:
             # WAHA Exige chatId no formato number@c.us
             # Garantir que é string e limpar caracteres estranhos
-            numero = str(numero).strip()
-            
-            if "@c.us" not in numero:
-                # Se vier só o número, adiciona o sufixo
-                chat_id = f"{numero}@c.us"
-            else:
-                chat_id = numero
+            # Limpa o número de sufixos duplicados (@c.us@c.us)
+            numero = str(numero).strip().replace("@c.us", "")
+            chat_id = f"{numero}@c.us"
 
             url = f"{self.base_url}/api/sendText"
             
