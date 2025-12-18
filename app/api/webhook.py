@@ -82,9 +82,22 @@ def process_message_background(numero_cliente: str, body: str, media_url: str = 
             summary = expense_service.get_summary(numero_cliente)
             total = summary["total"]
             count = summary["count"]
-            # Personaliza a resposta da IA com o dado real se necessário
-            if "total" not in resposta_texto.lower():
-                resposta_texto += f"\n\n📊 *Resumo Atual:*\nTotal: R$ {total:.2f}\nRegistros: {count}"
+            by_category = summary.get("by_category", {})
+            
+            # Formata o texto do relatório
+            report_text = f"\n\n📊 *Relatório Geral*\nTotal Gasto: *R$ {total:.2f}* ({count} registros)\n\n"
+            
+            if by_category:
+                report_text += "*Por Categoria:*\n"
+                for cat, val in by_category.items():
+                    report_text += f"- {cat}: R$ {val:.2f}\n"
+            
+            # Se a IA já escreveu algo, adiciona o relatório técnico abaixo
+            if "Total" not in resposta_texto: 
+                resposta_texto += report_text
+            else:
+                # Se a IA tentou inventar números, substituímos pelo real
+                resposta_texto = report_text
 
         # 3. Envia a resposta via WAHA
         if resposta_texto:

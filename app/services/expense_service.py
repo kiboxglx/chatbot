@@ -29,10 +29,18 @@ class ExpenseService:
         try:
             results = db.query(Expense).filter(Expense.user_phone == user_phone).all()
             total = sum(e.amount for e in results)
+            
+            # Agrupamento por categoria
+            by_category = {}
+            for e in results:
+                cat = e.category or "Outros"
+                by_category[cat] = by_category.get(cat, 0.0) + e.amount
+                
             return {
                 "count": len(results),
                 "total": total,
-                "expenses": results
+                "by_category": by_category,
+                "expenses": results[-10:] # Retorna os últimos 10 para detalhar se precisar
             }
         finally:
             db.close()
