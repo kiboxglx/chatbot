@@ -9,6 +9,9 @@ _brain = None
 _wa = None
 _exp = None
 
+# Lista global para diagnóstico de produção
+RECENT_EVENTS = []
+
 def get_brain():
     global _brain
     if not _brain:
@@ -101,6 +104,17 @@ async def webhook(request: Request, background_tasks: BackgroundTasks):
         raw_body = await request.body()
         data = json.loads(raw_body)
         
+        # Log para diagnóstico
+        event_info = {
+            "time": time.strftime("%H:%M:%S"),
+            "event": data.get("event"),
+            "payload_id": data.get("payload", {}).get("id"),
+            "from": data.get("payload", {}).get("from"),
+            "fromMe": data.get("payload", {}).get("fromMe")
+        }
+        RECENT_EVENTS.append(event_info)
+        if len(RECENT_EVENTS) > 20: RECENT_EVENTS.pop(0)
+
         # Validação Básica WAHA
         event = data.get("event")
         if not event:

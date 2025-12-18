@@ -19,6 +19,11 @@ app = FastAPI(
 def health_check():
     return {"status": "online", "message": "Secretária Financeira Ativa"}
 
+@app.get("/api/debug/events")
+def get_debug_events():
+    from app.api.webhook import RECENT_EVENTS
+    return {"recent_events": RECENT_EVENTS}
+
 # 2. EVENTOS DE STARTUP
 @app.on_event("startup")
 async def startup_event():
