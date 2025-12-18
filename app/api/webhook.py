@@ -158,8 +158,8 @@ async def webhook(request: Request, background_tasks: BackgroundTasks):
         if not remote_jid:
             return {"status": "error", "reason": "No 'from' field"}
             
-        # Garante ID limpo numérico (remove @c.us, @lid, etc)
-        chat_id = remote_jid.split("@")[0]
+        # Usa o JID completo para garantir que @lid e @g.us sejam respeitados
+        chat_id = remote_jid
         message_body = payload.get("body", "")
         
         if not message_body:
