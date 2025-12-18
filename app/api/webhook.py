@@ -6,9 +6,32 @@ import json
 import time
 
 router = APIRouter()
-brain_service = BrainService()
-whatsapp_service = WhatsAppService()
-expense_service = ExpenseService()
+
+# Instanciação preguiçosa (Lazy) para evitar erros no import
+_brain = None
+_wa = None
+_exp = None
+
+def get_brain():
+    global _brain
+    if not _brain:
+        from app.services.ai_service import BrainService
+        _brain = BrainService()
+    return _brain
+
+def get_whatsapp():
+    global _wa
+    if not _wa:
+        from app.services.whatsapp_service import WhatsAppService
+        _wa = WhatsAppService()
+    return _wa
+
+def get_expense():
+    global _exp
+    if not _exp:
+        from app.services.expense_service import ExpenseService
+        _exp = ExpenseService()
+    return _exp
 
 # --- Cache de Idempotência em Memória ---
 # Estrutura: {message_id: timestamp_processamento}
@@ -28,6 +51,11 @@ def process_message_background(numero_cliente: str, body: str, media_url: str = 
     try:
         print(f"🔄 [Background] Processando mensagem de {numero_cliente}...")
         
+        # Carrega serviços sob demanda
+        brain_service = get_brain()
+        whatsapp_service = get_whatsapp()
+        expense_service = get_expense()
+
         # 1. Processar com IA (BrainService)
         contexto = f"Cliente WhatsApp: {numero_cliente}"
         decisao = brain_service.processar_mensagem(body, contexto)
