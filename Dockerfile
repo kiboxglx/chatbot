@@ -4,17 +4,11 @@ FROM python:3.11-slim
 # Define o diretório de trabalho
 WORKDIR /app
 
-# Copia os arquivos de dependências
-COPY requirements.txt .
-
-# Instala as dependências
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Imagem base Python 3.11
-FROM python:3.11-slim
-
-# Define o diretório de trabalho
-WORKDIR /app
+# Instala dependências do sistema necessárias para o psycopg2
+RUN apt-get update && apt-get install -y \
+    libpq-dev \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copia os arquivos de dependências
 COPY requirements.txt .
