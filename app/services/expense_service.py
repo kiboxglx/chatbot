@@ -28,19 +28,47 @@ class ExpenseService:
         db = SessionLocal()
         try:
             results = db.query(Expense).filter(Expense.user_phone == user_phone).all()
-            total = sum(e.amount for e in results)
             
-            # Agrupamento por categoria
-            by_category = {}
+            if not results:
+                return {
+                    "total": 0.0,
+                    "count": 0,
+                    "average": 0.0,
+                    "top_category": None,
+                    "categories": []
+                }
+
+            total = sum(e.amount for e in results)
+            count = len(results)
+            average = total / count if count > 0 else 0
+            
+            # Agrupamento e cálculo de porcentagens
+            cat_map = {}
             for e in results:
-                cat = e.category or "Outros"
-                by_category[cat] = by_category.get(cat, 0.0) + e.amount
+                cat_name = e.category or "Outros"
+                cat_map[cat_name] = cat_map.get(cat_name, 0.0) + e.amount
+            
+            # Ordena categorias do maior para menor
+            sorted_cats = sorted(cat_map.items(), key=lambda x: x[1], reverse=True)
+            
+            categories_data = []
+            for name, amount in sorted_cats:
+                pct = (amount / total * 100) if total > 0 else 0
+                categories_data.append({
+                    "name": name,
+                    "amount": amount,
+                    "percentage": pct
+                })
                 
+            top_category = categories_data[0] if categories_data else None
+
             return {
-                "count": len(results),
+                "count": count,
                 "total": total,
-                "by_category": by_category,
-                "expenses": results[-10:] # Retorna os últimos 10 para detalhar se precisar
+                "average": average,
+                "top_category": top_category,
+                "categories": categories_data,
+                "expenses": results[-5:] # Últimos 5 para log
             }
         finally:
             db.close()

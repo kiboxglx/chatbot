@@ -79,25 +79,43 @@ def process_message_background(numero_cliente: str, body: str, media_url: str = 
             print(f"💰 Gasto salvo: {desc} - R$ {amount}")
 
         elif acao == "GENERATE_REPORT":
-            summary = expense_service.get_summary(numero_cliente)
-            total = summary["total"]
-            count = summary["count"]
-            by_category = summary.get("by_category", {})
+        elif acao == "GENERATE_REPORT":
+            data = expense_service.get_summary(numero_cliente)
             
-            # Formata o texto do relatório
-            report_text = f"\n\n📊 *Relatório Geral*\nTotal Gasto: *R$ {total:.2f}* ({count} registros)\n\n"
+            # Cabeçalho Técnico
+            report_text = (
+                f"📊 *Relatório Financeiro Analítico*\n"
+                f"📅 *Período:* Geral (All-time)\n\n"
+                f"💰 *Total Acumulado:* *R$ {data['total']:,.2f}*\n"
+                f"📉 *Média p/ Transação:* R$ {data['average']:,.2f}\n"
+                f"📝 *Registros:* {data['count']}\n"
+            )
+
+            # Top Gasto
+            if data['top_category']:
+                top = data['top_category']
+                report_text += f"🏆 *Ofensor Principal:* {top['name']} ({(top['percentage']):.0f}%)\n"
+
+            report_text += "\n*Detalhamento por Categoria:*\n"
             
-            if by_category:
-                report_text += "*Por Categoria:*\n"
-                for cat, val in by_category.items():
-                    report_text += f"- {cat}: R$ {val:.2f}\n"
+            # Gráfico ASCII
+            # Ex: ██████░░░░ 60%
+            def make_bar(pct):
+                filled = int(pct / 10)
+                return "█" * filled + "░" * (10 - filled)
+
+            for cat in data['categories']:
+                bar = make_bar(cat['percentage'])
+                report_text += (
+                    f"\n🔹 *{cat['name']}*\n"
+                    f"`{bar}` {cat['percentage']:.1f}%  (R$ {cat['amount']:,.2f})"
+                )
             
-            # Se a IA já escreveu algo, adiciona o relatório técnico abaixo
+            # Substitui resposta da IA
             if "Total" not in resposta_texto: 
-                resposta_texto += report_text
+                resposta_texto += f"\n\n{report_text}"
             else:
-                # Se a IA tentou inventar números, substituímos pelo real
-                resposta_texto = report_text
+                 resposta_texto = report_text
 
         # 3. Envia a resposta via WAHA
         if resposta_texto:
