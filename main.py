@@ -18,9 +18,12 @@ def health_check():
 
 @app.on_event("startup")
 async def startup_event():
-    print("🚀 Chatbot Iniciando... Verificando Banco de Dados...")
-    init_db()
-    print("✅ Banco de Dados OK!")
+    import threading
+    print("🚀 Chatbot Iniciando... Verificando Banco de Dados (Async)...")
+    # Tenta iniciar o banco mas não trava a subida da API
+    # Importante para que o Healthcheck/Port binding aconteça rápido na Railway
+    threading.Thread(target=init_db).start()
+    print("⏳ Verificação de Banco encaminhada para background.")
 
 # Configuração de CORS
 app.add_middleware(
