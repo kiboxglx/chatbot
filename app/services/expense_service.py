@@ -24,10 +24,17 @@ class ExpenseService:
         finally:
             db.close()
 
-    def get_summary(self, user_phone: str):
+    def get_summary(self, user_phone: str, start_date: datetime = None, end_date: datetime = None):
         db = SessionLocal()
         try:
-            results = db.query(Expense).filter(Expense.user_phone == user_phone).all()
+            query = db.query(Expense).filter(Expense.user_phone == user_phone)
+            
+            if start_date:
+                query = query.filter(Expense.date >= start_date)
+            if end_date:
+                query = query.filter(Expense.date <= end_date)
+                
+            results = query.all()
             
             if not results:
                 return {
@@ -35,7 +42,8 @@ class ExpenseService:
                     "count": 0,
                     "average": 0.0,
                     "top_category": None,
-                    "categories": []
+                    "categories": [],
+                    "period_label": "Nenhum dado no período"
                 }
 
             total = sum(e.amount for e in results)

@@ -79,12 +79,36 @@ def process_message_background(numero_cliente: str, body: str, media_url: str = 
             print(f"💰 Gasto salvo: {desc} - R$ {amount}")
 
         elif acao == "GENERATE_REPORT":
-            data = expense_service.get_summary(numero_cliente)
+            # Extrai período soliticado pela IA
+            periodo = params.get("period", "all")
+            from datetime import datetime, timedelta
+            
+            start_date = None
+            end_date = None
+            period_label = "Geral (Tudo)"
+
+            now = datetime.now()
+            
+            if periodo == "today":
+                start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
+                end_date = now.replace(hour=23, minute=59, second=59, microsecond=999)
+                period_label = "Hoje"
+            elif periodo == "week":
+                # Início da semana (Segunda-feira)
+                start_date = (now - timedelta(days=now.weekday())).replace(hour=0, minute=0, second=0)
+                end_date = now
+                period_label = "Esta Semana"
+            elif periodo == "month":
+                start_date = now.replace(day=1, hour=0, minute=0, second=0)
+                end_date = now
+                period_label = "Este Mês"
+            
+            data = expense_service.get_summary(numero_cliente, start_date, end_date)
             
             # Cabeçalho Técnico
             report_text = (
                 f"📊 *Relatório Financeiro Analítico*\n"
-                f"📅 *Período:* Geral (All-time)\n\n"
+                f"📅 *Período:* {period_label}\n\n"
                 f"💰 *Total Acumulado:* *R$ {data['total']:,.2f}*\n"
                 f"📉 *Média p/ Transação:* R$ {data['average']:,.2f}\n"
                 f"📝 *Registros:* {data['count']}\n"

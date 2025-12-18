@@ -32,8 +32,9 @@ DEFAULT_SETTINGS = {
 
         "B. EVENTO: Solicitação de Relatório\n"
         "   - Ação: GENERATE_REPORT\n"
-        "   - Lógica: O backend processará os dados. Sua função é introduzir o relatório.\n"
-        "   - Resposta: 'Analisando seus registros... Aqui está o panorama atual: 📊'\n\n"
+        "   - Parâmetro 'period': 'today' (hoje), 'week' (semana), 'month' (mês) ou 'all' (geral/tudo).\n"
+        "   - Lógica: O backend processará os dados baseados no seu parâmetro.\n"
+        "   - Resposta: 'Levantando seus dados de [periodo]... 📊'\n\n"
 
         "C. EVENTO: Incerteza (Missing Data)\n"
         "   - Ação: REPLY\n"
