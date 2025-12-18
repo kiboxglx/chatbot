@@ -1,25 +1,34 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from dotenv import load_dotenv
 import os
 
-# Carrega variáveis de ambiente (Importante para DATABASE_URL, etc)
+# Carrega variáveis de ambiente
 load_dotenv()
 
-app = FastAPI(title="Chatbot Financeiro", version="1.0.0")
+app = FastAPI(
+    title="Secretária Financeira Virtual",
+    description="Bot de Gestão de Gastos e Relatórios via WhatsApp",
+    version="1.0.0"
+)
 
+# 1. HEALTHCHECK (Sempre no topo para Railway)
 @app.get("/api/health")
 def health_check():
     return {"status": "online", "message": "Secretária Financeira Ativa"}
 
+# 2. EVENTOS DE STARTUP
 @app.on_event("startup")
 async def startup_event():
     import threading
     from app.core.init_db import init_db
-    print("🚀 Iniciando Banco de Dados...")
+    print("🚀 Verificando Banco de Dados...")
+    # Executa em thread separada para não travar o loop principal (importante para Railway)
     threading.Thread(target=init_db).start()
 
-# Configuração de CORS Básica
+# 3. MIDDLEWARES
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -28,25 +37,36 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Rota raiz simples
-@app.get("/")
-def read_root():
-    return {"status": "Chatbot API Barebones", "docs": "/docs"}
+# 4. ROTEADORES DE API
+from app.api import webhook, clients, settings, error_handler, management, tools
 
-# Tentativa de carregar os roteadores de forma silenciada
-try:
-    from app.api import webhook, clients, settings, error_handler, management
-    app.include_router(webhook.router)
-    app.include_router(clients.router)
-    app.include_router(settings.router)
-    app.include_router(error_handler.router)
-    app.include_router(management.router)
-    print("✅ Roteadores carregados com sucesso.")
-except Exception as e:
-    print(f"⚠️ ERRO AO CARREGAR ROTEADORES (Continuando em modo seguro): {e}")
+app.include_router(webhook.router)
+app.include_router(clients.router)
+app.include_router(settings.router)
+app.include_router(error_handler.router)
+app.include_router(management.router)
+app.include_router(tools.router)
 
-# Frontend desativado temporariamente para debugar healthcheck
-print("ℹ️ Frontend desativado no modo barebones.")
+# 5. SERVINDO O FRONTEND (SPA)
+# Verifica se a pasta de build existe
+frontend_path = "frontend/dist"
+if os.path.exists(frontend_path):
+    print("✅ Frontend detectado. Configurando rotas SPA...")
+    app.mount("/assets", StaticFiles(directory=f"{frontend_path}/assets"), name="assets")
+
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        # Tenta servir arquivo estático se existir
+        file_path = os.path.join(frontend_path, full_path)
+        if os.path.isfile(file_path):
+            return FileResponse(file_path)
+        # Fallback para index.html (React Router)
+        return FileResponse(os.path.join(frontend_path, "index.html"))
+else:
+    print("ℹ️ Frontend não encontrado (frontend/dist). Servindo roteador raiz.")
+    @app.get("/")
+    def read_root():
+        return {"status": "Online", "mode": "API Only"}
 
 if __name__ == "__main__":
     import uvicorn
