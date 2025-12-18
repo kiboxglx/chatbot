@@ -1,13 +1,23 @@
-print("🔥 INICIANDO APLICAÇÃO BAREBONES (main.py)...")
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
 import os
 
-app = FastAPI(title="Chatbot FIX", version="0.9.9")
+# Carrega variáveis de ambiente (Importante para DATABASE_URL, etc)
+load_dotenv()
+
+app = FastAPI(title="Chatbot Financeiro", version="1.0.0")
 
 @app.get("/api/health")
 def health_check():
-    return {"status": "online", "message": "BAREBONES ACTIVE"}
+    return {"status": "online", "message": "Secretária Financeira Ativa"}
+
+@app.on_event("startup")
+async def startup_event():
+    import threading
+    from app.core.init_db import init_db
+    print("🚀 Iniciando Banco de Dados...")
+    threading.Thread(target=init_db).start()
 
 # Configuração de CORS Básica
 app.add_middleware(
