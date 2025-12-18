@@ -31,12 +31,13 @@ app.include_router(settings.router)
 app.include_router(error_handler.router)
 app.include_router(management.router)
 
+@app.get("/api/health")
+def health_check():
+    return {"status": "online"}
+
 @app.get("/")
 def read_root():
     return {"status": "Chatbot API Online", "docs": "/docs"}
-
-
-# --- Frontend Integration (Production) ---
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
@@ -57,9 +58,6 @@ if os.path.exists("frontend/dist"):
         # Senão, retorna o index.html (React Router assume)
         return FileResponse("frontend/dist/index.html")
 
-@app.get("/api/health")
-def health_check():
-    return {"status": "online"}
     
 if __name__ == "__main__":
     import uvicorn
