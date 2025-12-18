@@ -43,6 +43,19 @@ class WhatsAppService:
             
             response = requests.post(url, json=payload, headers=headers, timeout=60)
             
+            # Log em RECENT_EVENTS para diagnóstico
+            try:
+                from app.api.webhook import RECENT_EVENTS
+                import time
+                RECENT_EVENTS.append({
+                    "time": time.strftime("%H:%M:%S"),
+                    "event": "OUTBOUND_SEND",
+                    "to": chat_id,
+                    "status": response.status_code,
+                    "body_snippet": mensagem[:50]
+                })
+            except: pass
+
             if response.status_code == 201:
                 print(f"✅ [Outbound] Sucesso: {response.json().get('id', 'SEM_ID')}")
                 return response.json()
