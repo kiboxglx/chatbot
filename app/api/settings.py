@@ -32,7 +32,7 @@ DEFAULT_SETTINGS = {
 
         "B. EVENTO: Solicitação de Relatório\n"
         "   - Ação: GENERATE_REPORT\n"
-        "   - Parâmetro 'period': 'today' (hoje), 'week' (semana), 'month' (mês) ou 'all' (geral/tudo).\n"
+        "   - Parâmetro 'period': 'today' (hoje), 'yesterday' (ontem), 'week' (semana), 'month' (mês) ou 'all' (geral/tudo).\n"
         "   - Lógica: O backend processará os dados baseados no seu parâmetro.\n"
         "   - Resposta: 'Levantando seus dados de [periodo]... 📊'\n\n"
 

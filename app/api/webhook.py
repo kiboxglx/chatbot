@@ -93,6 +93,11 @@ def process_message_background(numero_cliente: str, body: str, media_url: str = 
                 start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
                 end_date = now.replace(hour=23, minute=59, second=59, microsecond=999)
                 period_label = "Hoje"
+            elif periodo == "yesterday":
+                yesterday = now - timedelta(days=1)
+                start_date = yesterday.replace(hour=0, minute=0, second=0, microsecond=0)
+                end_date = yesterday.replace(hour=23, minute=59, second=59, microsecond=999)
+                period_label = "Ontem"
             elif periodo == "week":
                 # Início da semana (Segunda-feira)
                 start_date = (now - timedelta(days=now.weekday())).replace(hour=0, minute=0, second=0)
