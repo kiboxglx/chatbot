@@ -214,6 +214,9 @@ async def webhook(request: Request, background_tasks: BackgroundTasks):
             
         # Extração de dados
         remote_jid = payload.get("from", "") # Ex: 551199999999@c.us, 551199999999@lid
+        if remote_jid == "status@broadcast":
+            return {"status": "ignored", "reason": "status_broadcast"}
+            
         if not remote_jid:
             return {"status": "error", "reason": "No 'from' field"}
             
