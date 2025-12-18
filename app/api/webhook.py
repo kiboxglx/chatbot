@@ -1,12 +1,14 @@
 from fastapi import APIRouter, Request, BackgroundTasks
 from app.services.ai_service import BrainService
 from app.services.whatsapp_service import WhatsAppService
+from app.services.expense_service import ExpenseService
 import json
 import time
 
 router = APIRouter()
 brain_service = BrainService()
 whatsapp_service = WhatsAppService()
+expense_service = ExpenseService()
 
 # --- Cache de Idempotência em Memória ---
 # Estrutura: {message_id: timestamp_processamento}

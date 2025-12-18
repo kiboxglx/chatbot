@@ -1,7 +1,9 @@
+print("🔥 INICIANDO APLICAÇÃO (main.py)...")
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import os
+import sys
 
 load_dotenv()
 
@@ -9,6 +11,10 @@ from app.api import webhook, clients, settings, error_handler, management
 from app.core.init_db import init_db
 
 app = FastAPI(title="Chatbot Contábil", version="0.1.0")
+
+@app.get("/api/health")
+def health_check():
+    return {"status": "online", "message": "I am alive!"}
 
 @app.on_event("startup")
 async def startup_event():
@@ -31,13 +37,6 @@ app.include_router(settings.router)
 app.include_router(error_handler.router)
 app.include_router(management.router)
 
-@app.get("/api/health")
-def health_check():
-    return {"status": "online"}
-
-@app.get("/")
-def read_root():
-    return {"status": "Chatbot API Online", "docs": "/docs"}
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
